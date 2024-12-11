@@ -143,7 +143,7 @@
             const button = document.getElementById('generate');
             button.disabled = true; // Disable the button to prevent multiple clicks
 
-            fetch('hhttps://ip-tracker-backend.vercel.app/api/generate-script')
+            fetch('https://ip-tracker-backend.vercel.app/api/generate-script')
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('script-output').value = data.script;
