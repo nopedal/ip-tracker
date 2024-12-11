@@ -11,22 +11,22 @@ const firebaseConfig = {
     measurementId: "G-RZKLS087CN"
 };
 
+// Firebase initialization only once, on the client side later
 module.exports = (req, res) => {
-    // Initialize Firebase only once
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-
     // Generate the script dynamically
     const script = `
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
     <script>
+        // Firebase configuration
         const firebaseConfig = ${JSON.stringify(firebaseConfig)};
+        
+        // Initialize Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
 
+        // Get IP Address and log it to Firebase
         fetch('https://api.ipify.org?format=json')
             .then(response => response.json())
             .then(data => {
@@ -39,6 +39,6 @@ module.exports = (req, res) => {
             });
     </script>`;
 
-    // Send the script as JSON response
+    // Send the script as a JSON response
     res.status(200).json({ script });
 };
