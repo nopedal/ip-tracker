@@ -1,9 +1,5 @@
-const express = require('express');
-const app = express();
-const cors = require('cors');
-
-app.use(cors());
-app.use(express.json());
+const firebase = require('firebase/app');
+require('firebase/database');
 
 const firebaseConfig = {
     apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
@@ -15,21 +11,22 @@ const firebaseConfig = {
     measurementId: "G-RZKLS087CN"
 };
 
-app.get('/generate-script', (req, res) => {
-    // Generate a JavaScript tracking script dynamically
+module.exports = (req, res) => {
+    // Initialize Firebase only once
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    // Generate the script dynamically
     const script = `
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
     <script>
-        // Firebase configuration
         const firebaseConfig = ${JSON.stringify(firebaseConfig)};
-        
-        // Initialize Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
 
-        // Get IP Address
         fetch('https://api.ipify.org?format=json')
             .then(response => response.json())
             .then(data => {
@@ -42,11 +39,6 @@ app.get('/generate-script', (req, res) => {
             });
     </script>`;
 
-    res.json({ script });
-});
-
-// Start the server
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+    // Send the script as JSON response
+    res.status(200).json({ script });
+};
