@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test IP Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2em;
+        }
+        .content {
+            margin: 20px;
+            text-align: center;
+        }
+        p {
+            font-size: 1.2em;
+            color: #333;
+        }
+        #logs {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #logs div {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #f4f4f4;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Testing IP Tracker Script</h1>
+</header>
+
+<div class="content">
+    <p>This is a test page where the IP tracker script will run.</p>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, push, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
+    authDomain: "iptracker-d6aac.firebaseapp.com",
+    projectId: "iptracker-d6aac",
+    storageBucket: "iptracker-d6aac.firebasestorage.app",
+    messagingSenderId: "352009531638",
+    appId: "1:352009531638:web:50ef03f74631115cddfcd7",
+    measurementId: "G-RZKLS087CN",
+    databaseURL: "https://iptracker-d6aac-default-rtdb.firebaseio.com"  
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    fetch('https://api.ipify.org?format=json')
+        .then(response => response.json())
+        .then(data => {
+            const ipAddress = data.ip;
+            console.log("IP Address fetched:", ipAddress);
+
+            const dbRef = ref(db, 'ip_logs');
+            push(dbRef, {
+                ip: ipAddress,
+                timestamp: new Date().toISOString()
+            }).then(() => {
+                console.log("IP logged to Firebase");
+            }).catch((error) => {
+                console.error("Error logging IP:", error);
+            });
+        });
+
+    const logsRef = ref(db, 'ip_logs');
+    onValue(logsRef, (snapshot) => {
+        const data = snapshot.val();
+        const logsContainer = document.getElementById('logs');
+        
+        logsContainer.innerHTML = '';
+
+        if (data) {
+            for (const key in data) {
+                if (data.hasOwnProperty(key)) {
+                    const log = data[key];
+                    const logElement = document.createElement('div');
+                    logElement.textContent = `IP: ${log.ip} | Timestamp: ${log.timestamp}`;
+                    logsContainer.appendChild(logElement);
+                }
+            }
+        } else {
+            logsContainer.innerHTML = '<p>No logs available.</p>';
+        }
+    });
+</script>
+
+
+<div id="logs"></div>
+
+</body>
+</html>

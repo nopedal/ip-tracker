@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Tracker Script Generator</title>
+    <link rel="stylesheet" href="styles.css"> 
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IP Tracker Script Generator</h1>
+        </header>
+        
+        <main>
+            <button id="generate">Generate IP Tracker Script</button>
+            <textarea id="script-output" rows="10" cols="50" readonly placeholder="Your generated script will appear here..."></textarea>
+            <button id="copy-script">Copy Script</button>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+    
+    <script>
+        document.getElementById('generate').addEventListener('click', () => {
+            const button = document.getElementById('generate');
+            button.disabled = true; // Disable the button
+
+            fetch('http://localhost:3000/generate-script')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('script-output').value = data.script;
+                    button.disabled = false; // Enable the button
+                })
+                .catch(err => {
+                    document.getElementById('script-output').value = 'Error generating script. Please try again later.';
+                    button.disabled = false; // Enable the button
+                    console.error('Error generating script:', err);
+                });
+        });
+
+        document.getElementById('copy-script').addEventListener('click', () => {
+            const scriptOutput = document.getElementById('script-output');
+            scriptOutput.select();
+            document.execCommand('copy');
+            alert('Script copied to clipboard!');
+        });
+    </script>
+</body>
+</html>
