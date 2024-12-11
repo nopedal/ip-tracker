@@ -9,7 +9,7 @@
     "routes": [
       {
         "src": "/api/generate-script",
-        "dest": "backend/api/generate-script.js"
+        "dest": "/backend/api/generate-script.js"
       }
     ]
   }
