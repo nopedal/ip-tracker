@@ -20,8 +20,9 @@ module.exports = (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
 
     const script = `
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
     <script>
         const firebaseConfig = ${JSON.stringify(firebaseConfig)};
         if (!firebase.apps.length) {
@@ -50,10 +51,6 @@ module.exports = (req, res) => {
 
         document.addEventListener('click', (event) => {
             logUserActivity('Click Event');
-        });
-
-        document.addEventListener('scroll', () => {
-            logUserActivity('Scroll Event');
         });
     </script>`;
     
