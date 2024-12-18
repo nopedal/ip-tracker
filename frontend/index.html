@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Tracker Script Generator</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Link to styles.css for external styling -->
+    <link rel="stylesheet" href="styles.css"> <!-- Link to external CSS if needed -->
     <style>
         /* Global Styles */
         body {
@@ -130,7 +130,7 @@
         </main>
 
         <footer>
-            <p>ip tracker by <a href="https://github.com/nopedal" target="_blank">Nikolas</a></p>
+            <p>IP Tracker by <a href="https://github.com/nopedal" target="_blank">Nikolas</a></p>
         </footer>
     </div>
 
@@ -139,28 +139,35 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
 
     <script>
+        // Generate script button functionality
         document.getElementById('generate').addEventListener('click', () => {
             const button = document.getElementById('generate');
             button.disabled = true; // Disable the button to prevent multiple clicks
 
+            // Fetch the generated script from the backend API
             fetch('https://ip-tracker-backend.vercel.app/api/generate-script')
                 .then(response => response.json())
                 .then(data => {
+                    // Populate the textarea with the fetched script
                     document.getElementById('script-output').value = data.script;
                     button.disabled = false; // Re-enable the button
                 })
                 .catch(err => {
+                    // Handle errors and display an error message
                     document.getElementById('script-output').value = 'Error generating script. Please try again later.';
                     button.disabled = false; // Re-enable the button
                     console.error('Error generating script:', err);
                 });
         });
 
+        // Copy script button functionality
         document.getElementById('copy-script').addEventListener('click', () => {
             const scriptOutput = document.getElementById('script-output');
             scriptOutput.select();
-            document.execCommand('copy');
-            alert('Script copied to clipboard!');
+            // Copy the text to clipboard
+            navigator.clipboard.writeText(scriptOutput.value)
+                .then(() => alert('Script copied to clipboard!'))
+                .catch(err => console.error('Error copying script:', err));
         });
     </script>
     
