@@ -1,5 +1,5 @@
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, push } = require('firebase/database');
+const { getDatabase, ref, push, update } = require('firebase/database');
 const cors = require('cors');
 
 const firebaseConfig = {
@@ -22,7 +22,6 @@ module.exports = (req, res) => {
     const script = `
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    
     <script>
         const firebaseConfig = ${JSON.stringify(firebaseConfig)};
         if (!firebase.apps.length) {
@@ -30,16 +29,29 @@ module.exports = (req, res) => {
         }
         
         const db = firebase.database();
-        const logUserActivity = (activity) => {
+        const sessionKey = sessionStorage.getItem('sessionKey') || 'session_' + Date.now();
+        sessionStorage.setItem('sessionKey', sessionKey);
+
+        const logUserActivity = (activityType) => {
             fetch('https://api.ipify.org?format=json')
                 .then(response => response.json())
                 .then(data => {
                     const ipAddress = data.ip;
-                    db.ref('user_logs').push({
-                        ip: ipAddress,
-                        activity: activity,
-                        page: window.location.href,
-                        timestamp: new Date().toISOString()
+
+                    const userRef = db.ref('user_logs/' + ipAddress);
+                    userRef.once('value').then(snapshot => {
+                        const data = snapshot.val() || {};
+                        if (!data[sessionKey]) {
+                            data[sessionKey] = { activities: [] };
+                        }
+                        data[sessionKey].activities.push({
+                            type: activityType,
+                            page: window.location.href,
+                            timestamp: new Date().toISOString()
+                        });
+
+                        // Update Firebase
+                        userRef.update(data);
                     });
                 })
                 .catch(error => console.error('Error fetching IP address:', error));
@@ -52,6 +64,8 @@ module.exports = (req, res) => {
         document.addEventListener('click', (event) => {
             logUserActivity('Click Event');
         });
+
+
     </script>`;
     
     res.status(200).json({ script });
