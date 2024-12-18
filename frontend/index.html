@@ -135,62 +135,26 @@
     </div>
 
     <!-- Firebase SDK -->
-<!-- Firebase Compatibility SDKs via CDN -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
 
-<script>
-    // Firebase configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
-        authDomain: "iptracker-d6aac.firebaseapp.com",
-        projectId: "iptracker-d6aac",
-        storageBucket: "iptracker-d6aac.firebasestorage.app",
-        messagingSenderId: "352009531638",
-        appId: "1:352009531638:web:50ef03f74631115cddfcd7",
-        measurementId: "G-RZKLS087CN"
-    };
+    <script>
+        document.getElementById('generate').addEventListener('click', () => {
+            const button = document.getElementById('generate');
+            button.disabled = true; // Disable the button to prevent multiple clicks
 
-    // Initialize Firebase if it's not already initialized
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-
-    // Initialize Firestore
-    const db = firebase.firestore();
-
-    // Function to log user details
-    function logUserActivity() {
-        // Get the user's IP address
-        fetch('https://api.ipify.org?format=json')
-            .then(response => response.json())
-            .then(data => {
-                const ipAddress = data.ip;
-
-                
-                const userData = {
-                    ip: ipAddress,
-                    page: window.location.href,
-                    userAgent: navigator.userAgent, 
-                    timestamp: new Date().toISOString() 
-                };
-
-                db.collection('user_logs').add(userData)
-                    .then(() => {
-                        console.log('User activity logged:', userData);
-                    })
-                    .catch(error => {
-                        console.error('Error logging user activity:', error);
-                    });
-            })
-            .catch(error => {
-                console.error('Error fetching IP address:', error);
-            });
-    }
-
-    logUserActivity();
-</script>
-
+            fetch('https://ip-tracker-backend.vercel.app/api/generate-script')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('script-output').value = data.script;
+                    button.disabled = false; // Re-enable the button
+                })
+                .catch(err => {
+                    document.getElementById('script-output').value = 'Error generating script. Please try again later.';
+                    button.disabled = false; // Re-enable the button
+                    console.error('Error generating script:', err);
+                });
+        });
 
         document.getElementById('copy-script').addEventListener('click', () => {
             const scriptOutput = document.getElementById('script-output');
