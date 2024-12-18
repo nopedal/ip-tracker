@@ -17,35 +17,45 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 module.exports = (req, res) => {
-    // Enable CORS if needed
     res.setHeader("Access-Control-Allow-Origin", "*");
 
-    // Generate the script dynamically
     const script = `
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
     <script>
         const firebaseConfig = ${JSON.stringify(firebaseConfig)};
-        
-        // Initialize Firebase on the client side
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
+        
+        const db = firebase.database();
+        const logUserActivity = (activity) => {
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    const ipAddress = data.ip;
+                    db.ref('user_logs').push({
+                        ip: ipAddress,
+                        activity: activity,
+                        page: window.location.href,
+                        timestamp: new Date().toISOString()
+                    });
+                })
+                .catch(error => console.error('Error fetching IP address:', error));
+        };
 
-        // Get IP Address and log it to Firebase
-        fetch('https://api.ipify.org?format=json')
-            .then(response => response.json())
-            .then(data => {
-                const ipAddress = data.ip;
-                const db = firebase.database();
-                db.ref('ip_logs').push({
-                    ip: ipAddress,
-                    timestamp: new Date().toISOString()
-                });
-            });
+        document.addEventListener('DOMContentLoaded', () => {
+            logUserActivity('Page Visit');
+        });
+
+        document.addEventListener('click', (event) => {
+            logUserActivity('Click Event');
+        });
+
+        document.addEventListener('scroll', () => {
+            logUserActivity('Scroll Event');
+        });
     </script>`;
-
-    // Send the script as a JSON response
+    
     res.status(200).json({ script });
 };
-    
