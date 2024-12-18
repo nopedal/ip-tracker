@@ -12,7 +12,6 @@ const firebaseConfig = {
     measurementId: "G-RZKLS087CN"
 };
 
-// Initialize Firebase once
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -22,6 +21,7 @@ module.exports = (req, res) => {
     const script = `
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
     <script>
         const firebaseConfig = ${JSON.stringify(firebaseConfig)};
         if (!firebase.apps.length) {
