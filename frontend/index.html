@@ -4,52 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Tracker Script Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #f0f4f8, #e0e7ff);
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
             margin: 0;
             padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            color: #333;
+            color: #fff;
         }
         .container {
             background-color: #fff;
             border-radius: 12px;
-            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.15);
             width: 100%;
             max-width: 600px;
             padding: 40px 30px;
             text-align: center;
+            transition: all 0.3s ease-in-out;
+        }
+        .container:hover {
+            transform: translateY(-5px);
         }
         header h1 {
             font-size: 2.8rem;
-            color: #4CAF50;
+            color: #2575fc;
             margin-bottom: 25px;
-            font-weight: bold;
+            font-weight: 600;
         }
         button {
-            background-color: #4CAF50;
+            background-color: #2575fc;
             color: #fff;
             border: none;
             padding: 14px 32px;
             font-size: 1.1rem;
             border-radius: 8px;
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            transition: transform 0.2s ease-in-out, background-color 0.3s ease;
             margin: 12px 0;
             width: 80%;
             max-width: 270px;
         }
         button:hover {
-            background-color: #45a049;
+            background-color: #1c63d0;
             transform: scale(1.05);
         }
         button:disabled {
-            background-color: #c8e6c9;
+            background-color: #e0e0e0;
             cursor: not-allowed;
         }
         textarea {
@@ -70,10 +75,10 @@
             box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.2);
         }
         #copy-script {
-            background-color: #2196F3;
+            background-color: #4CAF50;
         }
         #copy-script:hover {
-            background-color: #1976D2;
+            background-color: #45a049;
         }
         #script-output {
             height: 200px;
@@ -84,12 +89,34 @@
             color: #555;
         }
         footer a {
-            color: #4CAF50;
+            color: #2575fc;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600;
         }
         footer a:hover {
             text-decoration: underline;
+        }
+        .loading {
+            font-size: 1.2rem;
+            color: #4CAF50;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .generated-script {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f4f4f4;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+        .error {
+            color: #e53935;
+            text-align: center;
+            font-size: 1.2rem;
+            margin-top: 20px;
         }
         @media screen and (max-width: 768px) {
             .container {
@@ -102,32 +129,6 @@
             textarea {
                 font-size: 0.9rem;
             }
-            /* Add this to your existing CSS file */
-
-.loading {
-    font-size: 1.2rem;
-    color: #4CAF50;
-    text-align: center;
-}
-
-.generated-script {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    background-color: #f4f4f4;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    color: #333;
-}
-
-.error {
-    color: #e53935;
-    text-align: center;
-    font-size: 1.2rem;
-    margin-top: 20px;
-}
-
         }
     </style>
 </head>
@@ -151,17 +152,30 @@
         document.getElementById('generate').addEventListener('click', () => {
             const button = document.getElementById('generate');
             button.disabled = true;
+            const scriptOutput = document.getElementById('script-output');
+            const loadingMessage = document.createElement('div');
+            loadingMessage.classList.add('loading');
+            loadingMessage.textContent = 'Generating script... Please wait.';
+            scriptOutput.parentElement.appendChild(loadingMessage);
+
             fetch('https://ip-tracker-backend.vercel.app/api/generate-script')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('script-output').value = data.script;
+                    scriptOutput.value = data.script;
                     button.disabled = false;
+                    loadingMessage.remove(); // Remove loading message
                 })
                 .catch(err => {
-                    document.getElementById('script-output').value = 'Error generating script. Please try again later.';
+                    scriptOutput.value = 'Error generating script. Please try again later.';
                     button.disabled = false;
+                    loadingMessage.remove(); // Remove loading message
+                    const errorMessage = document.createElement('div');
+                    errorMessage.classList.add('error');
+                    errorMessage.textContent = 'Failed to generate the script. Please try again later.';
+                    scriptOutput.parentElement.appendChild(errorMessage);
                 });
         });
+
         document.getElementById('copy-script').addEventListener('click', () => {
             const scriptOutput = document.getElementById('script-output');
             scriptOutput.select();
