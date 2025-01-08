@@ -1,6 +1,5 @@
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, push, update } = require('firebase/database');
-const cors = require('cors');
+const { getDatabase, ref, update } = require('firebase/database');
 
 const firebaseConfig = {
     apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
@@ -21,71 +20,80 @@ module.exports = (req, res) => {
     const script = `
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
+    
     <script>
         const firebaseConfig = ${JSON.stringify(firebaseConfig)};
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
-
+        
         const db = firebase.database();
         const sessionKey = sessionStorage.getItem('sessionKey') || 'session_' + Date.now();
         sessionStorage.setItem('sessionKey', sessionKey);
 
-        const logUserActivity = (activityType) => {
+        const logUserActivity = (activityType, additionalData = {}) => {
             fetch('https://api.ipify.org?format=json')
                 .then(response => response.json())
                 .then(data => {
-                    const ipAddress = data.ip.replace(/\./g, '_');
+                    const ipAddress = data.ip;
 
                     const userRef = db.ref('user_logs/' + ipAddress);
                     userRef.once('value').then(snapshot => {
                         const data = snapshot.val() || {};
                         if (!data[sessionKey]) {
-                            data[sessionKey] = { activities: [], lastActivity: null };
+                            data[sessionKey] = { activities: [] };
                         }
-
-                        const activity = {
+                        data[sessionKey].activities.push({
                             type: activityType,
                             page: window.location.href,
-                            timestamp: new Date().toISOString()
-                        };
+                            timestamp: new Date().toISOString(),
+                            ...additionalData
+                        });
 
-                        data[sessionKey].activities.push(activity);
-                        data[sessionKey].lastActivity = new Date().toISOString();
-
+                        // Update Firebase
                         userRef.update(data);
                     });
                 })
                 .catch(error => console.error('Error fetching IP address:', error));
         };
 
-        const setSessionTimeout = () => {
-            setTimeout(() => {
-                sessionStorage.removeItem('sessionKey');
-            }, 30 * 60 * 1000); // Timeout after 30 minutes of inactivity
-        };
-
+        // Track page visits
         document.addEventListener('DOMContentLoaded', () => {
-            logUserActivity('Page Visit');
-            setSessionTimeout();
+            const sessionStart = new Date().toISOString();
+            sessionStorage.setItem('session_start', sessionStart);
+            logUserActivity('Page Visit', { session_start: sessionStart });
         });
 
+        // Track clicks
         document.addEventListener('click', () => {
             logUserActivity('Click Event');
         });
 
-        const observeFormSubmissions = () => {
-            const forms = document.querySelectorAll('form');
-            forms.forEach(form => {
-                form.addEventListener('submit', () => {
-                    logUserActivity('Form Submission');
-                });
-            });
-        };
+        // Track form submissions
+        document.addEventListener('submit', (event) => {
+            const form = event.target;
+            const formId = form.id || 'Unknown Form';
+            logUserActivity('Form Submission', { formId });
+        });
 
-        observeFormSubmissions();
+        // Track "Thank You" page visit
+        if (window.location.href.includes('thank-you')) {
+            logUserActivity('Thank You Page');
+        }
+
+        // Track session duration and bounce
+        window.addEventListener('beforeunload', () => {
+            const sessionStart = sessionStorage.getItem('session_start');
+            const sessionEnd = new Date().toISOString();
+            const sessionDuration = sessionStart ? (new Date(sessionEnd) - new Date(sessionStart)) / 1000 : null;
+
+            if (sessionDuration && sessionDuration < 10) {
+                logUserActivity('Bounce', { sessionDuration });
+            } else {
+                logUserActivity('Session End', { session_end: sessionEnd, sessionDuration });
+            }
+        });
     </script>`;
-
+    
     res.status(200).json({ script });
 };
