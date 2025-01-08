@@ -45,6 +45,11 @@ module.exports = (req, res) => {
                     // Sanitize the IP address for Firebase path
                     const sanitizedIpAddress = sanitizePath(ipAddress);
 
+                    if (!sanitizedIpAddress) {
+                        console.error('Invalid IP address or empty path');
+                        return;
+                    }
+
                     const userRef = db.ref('user_logs/' + sanitizedIpAddress);
                     userRef.once('value').then(snapshot => {
                         const data = snapshot.val() || {};
