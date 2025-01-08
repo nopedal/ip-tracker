@@ -177,7 +177,7 @@
                 <!-- Generated script will appear here -->
             </div>
             <textarea id="script-output" rows="10" readonly placeholder="Your generated script will appear here..."></textarea>
-            <button id="copy-script" class="copy-btn">Copy Script</button>
+            <button id="copy-script" class="copy-btn" style="display: none;">Copy Script</button>
         </main>
         <footer>
             <p>IP Tracker by <a href="https://github.com/nopedal" target="_blank">Nikolas</a></p>
@@ -195,30 +195,34 @@
             scriptContainer.innerHTML = ''; // Clear previous content
             scriptContainer.appendChild(loadingSpinner);
 
+            // Fetch the script from the backend
             fetch('https://ip-tracker-backend.vercel.app/api/generate-script')
                 .then(response => response.json())
                 .then(data => {
                     console.log('Script generated:', data);
 
+                    // Clear the loading spinner
                     loadingSpinner.style.display = 'none';
 
+                    // Create and append the generated script
                     const generatedScriptBlock = document.createElement('pre');
                     generatedScriptBlock.classList.add('generated-script');
                     generatedScriptBlock.textContent = data.script;
                     scriptContainer.appendChild(generatedScriptBlock);
 
+                    // Fade-in effect for the generated script block
                     generatedScriptBlock.style.opacity = 0;
                     setTimeout(() => {
                         generatedScriptBlock.style.transition = 'opacity 0.5s ease-in';
                         generatedScriptBlock.style.opacity = 1;
                     }, 10);
 
-                    // Show the "Copy Script" button
-                    document.getElementById('copy-script').style.display = 'inline-block';
-
-                    // Copy the script to the textarea (for easier copy-paste)
+                    // Display the textarea with the generated script for easy copying
                     document.getElementById('script-output').style.display = 'block';
                     document.getElementById('script-output').value = data.script;
+
+                    // Show the "Copy Script" button
+                    document.getElementById('copy-script').style.display = 'inline-block';
                 })
                 .catch(error => {
                     console.error('Error generating script:', error);
@@ -233,7 +237,7 @@
         // Improved Copy Script functionality
         document.getElementById('copy-script').addEventListener('click', async () => {
             const scriptOutput = document.getElementById('script-output');
-            
+
             try {
                 // Use asynchronous clipboard API
                 await navigator.clipboard.writeText(scriptOutput.value);
