@@ -21,13 +21,13 @@ module.exports = (req, res) => {
     const script = `
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    
+
     <script>
         const firebaseConfig = ${JSON.stringify(firebaseConfig)};
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
-        
+
         const db = firebase.database();
         const sessionKey = sessionStorage.getItem('sessionKey') || 'session_' + Date.now();
         sessionStorage.setItem('sessionKey', sessionKey);
@@ -36,37 +36,56 @@ module.exports = (req, res) => {
             fetch('https://api.ipify.org?format=json')
                 .then(response => response.json())
                 .then(data => {
-                    const ipAddress = data.ip;
+                    const ipAddress = data.ip.replace(/\./g, '_');
 
                     const userRef = db.ref('user_logs/' + ipAddress);
                     userRef.once('value').then(snapshot => {
                         const data = snapshot.val() || {};
                         if (!data[sessionKey]) {
-                            data[sessionKey] = { activities: [] };
+                            data[sessionKey] = { activities: [], lastActivity: null };
                         }
-                        data[sessionKey].activities.push({
+
+                        const activity = {
                             type: activityType,
                             page: window.location.href,
                             timestamp: new Date().toISOString()
-                        });
+                        };
 
-                        // Update Firebase
+                        data[sessionKey].activities.push(activity);
+                        data[sessionKey].lastActivity = new Date().toISOString();
+
                         userRef.update(data);
                     });
                 })
                 .catch(error => console.error('Error fetching IP address:', error));
         };
 
+        const setSessionTimeout = () => {
+            setTimeout(() => {
+                sessionStorage.removeItem('sessionKey');
+            }, 30 * 60 * 1000); // Timeout after 30 minutes of inactivity
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             logUserActivity('Page Visit');
+            setSessionTimeout();
         });
 
-        document.addEventListener('click', (event) => {
+        document.addEventListener('click', () => {
             logUserActivity('Click Event');
         });
 
+        const observeFormSubmissions = () => {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', () => {
+                    logUserActivity('Form Submission');
+                });
+            });
+        };
 
+        observeFormSubmissions();
     </script>`;
-    
+
     res.status(200).json({ script });
 };
