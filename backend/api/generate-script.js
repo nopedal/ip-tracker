@@ -31,9 +31,9 @@ module.exports = (req, res) => {
         const sessionKey = sessionStorage.getItem('sessionKey') || 'session_' + Date.now();
         sessionStorage.setItem('sessionKey', sessionKey);
 
-        const sanitizePath = (str) => {
-            // Replace invalid characters with underscores
-            return str.replace(/[.#$\[\]]/g, '_');
+        const encodeIP = (ip) => {
+            // Base64 encode the IP address to ensure a safe Firebase path
+            return btoa(ip); // btoa() encodes the IP to Base64
         };
 
         const logUserActivity = (activityType, additionalData = {}) => {
@@ -42,15 +42,10 @@ module.exports = (req, res) => {
                 .then(data => {
                     const ipAddress = data.ip;
 
-                    // Sanitize the IP address for Firebase path
-                    const sanitizedIpAddress = sanitizePath(ipAddress);
+                    // Encode the IP address for Firebase path
+                    const encodedIpAddress = encodeIP(ipAddress);
 
-                    if (!sanitizedIpAddress) {
-                        console.error('Invalid IP address or empty path');
-                        return;
-                    }
-
-                    const userRef = db.ref('user_logs/' + sanitizedIpAddress);
+                    const userRef = db.ref('user_logs/' + encodedIpAddress);
                     userRef.once('value').then(snapshot => {
                         const data = snapshot.val() || {};
                         if (!data[sessionKey]) {
