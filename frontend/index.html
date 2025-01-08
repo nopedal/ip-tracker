@@ -4,128 +4,106 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Tracker Script Generator</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f4f7fa;
+        /* General Reset */
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Page background */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             color: #333;
         }
+
+        /* Main container */
         .container {
             background-color: #fff;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 480px;
-            padding: 40px 30px;
+            max-width: 600px;
+            padding: 40px;
             text-align: center;
-            transition: transform 0.3s ease;
         }
-        .container:hover {
-            transform: translateY(-5px);
-        }
+
         header h1 {
-            font-size: 2.6rem;
-            color: #333;
-            margin-bottom: 20px;
-            font-weight: 600;
+            font-size: 2.5rem;
+            color: #4C51BF;
+            margin-bottom: 30px;
+            font-weight: bold;
         }
+
+        /* Button styles */
         button {
-            background-color: #4C51BF; /* Purple instead of green */
+            background-color: #4C51BF;
             color: #fff;
             border: none;
             padding: 14px 32px;
             font-size: 1.1rem;
             border-radius: 8px;
             cursor: pointer;
-            transition: transform 0.2s ease, background-color 0.3s ease;
+            transition: background-color 0.3s ease, transform 0.2s ease;
             margin: 12px 0;
             width: 80%;
             max-width: 270px;
         }
+
         button:hover {
-            background-color: #3b40a3; /* Slightly darker purple */
+            background-color: #434190;
             transform: scale(1.05);
         }
+
         button:disabled {
-            background-color: #d1d5db;
+            background-color: #c8c8d3;
             cursor: not-allowed;
         }
+
+        /* Textarea styles */
         textarea {
             width: 100%;
             padding: 15px;
             border-radius: 8px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #ddd;
             resize: none;
             font-family: 'Courier New', monospace;
             font-size: 1rem;
             margin-top: 20px;
             background-color: #fafafa;
             color: #333;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
             transition: box-shadow 0.3s ease;
         }
+
         textarea:focus {
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.2);
         }
-        .copy-btn {
-            background-color: #6C63FF; /* Teal/Purple color */
-            color: #fff;
-            font-size: 1rem;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 20px;
-            transition: background-color 0.3s ease, transform 0.3s ease;
-            width: 80%;
-            max-width: 270px;
-            margin-bottom: 10px;
+
+        /* Loading Spinner */
+        .loading-spinner {
+            margin: 20px auto;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #4C51BF;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
         }
-        .copy-btn:hover {
-            background-color: #5a54e3;
-            transform: scale(1.05);
+
+        /* Spinner animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .copy-btn:disabled {
-            background-color: #c8e6c9;
-        }
-        .copy-btn i {
-            margin-right: 8px;
-        }
-        footer {
-            margin-top: 30px;
-            font-size: 0.9rem;
-            color: #777;
-        }
-        footer a {
-            color: #4C51BF;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        footer a:hover {
-            text-decoration: underline;
-        }
-        .loading {
-            font-size: 1.2rem;
-            color: #888;
-            text-align: center;
-            margin-top: 20px;
-        }
-        .error {
-            color: #e53e3e;
-            text-align: center;
-            font-size: 1.2rem;
-            margin-top: 20px;
-        }
+
+        /* Generated script block styles */
         .generated-script {
             white-space: pre-wrap;
             word-wrap: break-word;
@@ -135,76 +113,113 @@
             margin-top: 20px;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
             color: #333;
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
         }
-        @media screen and (max-width: 768px) {
-            .container {
-                padding: 25px;
-            }
-            button {
-                font-size: 1rem;
-                padding: 12px 24px;
-            }
-            textarea {
-                font-size: 0.9rem;
-            }
+
+        /* Error message styles */
+        .error {
+            color: #e53e3e;
+            font-size: 1.2rem;
+            margin-top: 20px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+
+        /* Footer styling */
+        footer {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        footer a {
+            color: #4C51BF;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
+
     <div class="container">
         <header>
             <h1>IP Tracker Script Generator</h1>
         </header>
         <main>
-            <button id="generate">Generate IP Tracker Script</button>
+            <button id="generate-script-btn">Generate IP Tracker Script</button>
+            <div id="generated-script">
+                <!-- Generated script will appear here -->
+            </div>
             <textarea id="script-output" rows="10" readonly placeholder="Your generated script will appear here..."></textarea>
-            <button id="copy-script" class="copy-btn" disabled>
-                <i class="fas fa-clipboard"></i> Copy Script
-            </button>
         </main>
         <footer>
             <p>IP Tracker by <a href="https://github.com/nopedal" target="_blank">Nikolas</a></p>
         </footer>
     </div>
 
-    <!-- FontAwesome for the clipboard icon -->
-    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
-
     <script>
-        document.getElementById('generate').addEventListener('click', () => {
-            const button = document.getElementById('generate');
-            button.disabled = true;
-            const scriptOutput = document.getElementById('script-output');
-            const loadingMessage = document.createElement('div');
-            loadingMessage.classList.add('loading');
-            loadingMessage.textContent = 'Generating script... Please wait.';
-            scriptOutput.parentElement.appendChild(loadingMessage);
+        document.getElementById('generate-script-btn').addEventListener('click', function() {
+            console.log('Sending request to the backend...');
 
+            // Show loading spinner
+            const scriptContainer = document.getElementById('generated-script');
+            const loadingSpinner = document.createElement('div');
+            loadingSpinner.classList.add('loading-spinner');
+            scriptContainer.innerHTML = ''; // Clear previous content
+            scriptContainer.appendChild(loadingSpinner);
+
+            // Fetch the script from the backend
             fetch('https://ip-tracker-backend.vercel.app/api/generate-script')
-                .then(response => response.json())
-                .then(data => {
-                    scriptOutput.value = data.script;
-                    button.disabled = false;
-                    loadingMessage.remove(); // Remove loading message
-                    document.getElementById('copy-script').disabled = false;
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
                 })
-                .catch(err => {
-                    scriptOutput.value = 'Error generating script. Please try again later.';
-                    button.disabled = false;
-                    loadingMessage.remove(); // Remove loading message
+                .then(data => {
+                    console.log('Script generated:', data);
+
+                    // Remove loading spinner
+                    loadingSpinner.style.display = 'none';
+
+                    // Append the generated script dynamically with smooth transition
+                    const generatedScriptBlock = document.createElement('pre');
+                    generatedScriptBlock.classList.add('generated-script');
+                    generatedScriptBlock.textContent = data.script; // Use textContent for better security
+                    scriptContainer.appendChild(generatedScriptBlock);
+
+                    // Add smooth fade-in effect for generated script
+                    generatedScriptBlock.style.opacity = 0;
+                    setTimeout(() => {
+                        generatedScriptBlock.style.transition = 'opacity 0.5s ease-in';
+                        generatedScriptBlock.style.opacity = 1;
+                    }, 10);
+                })
+                .catch(error => {
+                    console.error('Error generating script:', error);
+
+                    // Remove loading spinner
+                    loadingSpinner.style.display = 'none';
+
+                    // Show error message with smooth transition
                     const errorMessage = document.createElement('div');
                     errorMessage.classList.add('error');
                     errorMessage.textContent = 'Failed to generate the script. Please try again later.';
-                    scriptOutput.parentElement.appendChild(errorMessage);
+                    scriptContainer.appendChild(errorMessage);
+
+                    // Add smooth fade-in effect for error message
+                    errorMessage.style.opacity = 0;
+                    setTimeout(() => {
+                        errorMessage.style.transition = 'opacity 0.5s ease-in';
+                        errorMessage.style.opacity = 1;
+                    }, 10);
                 });
         });
-
-        document.getElementById('copy-script').addEventListener('click', () => {
-            const scriptOutput = document.getElementById('script-output');
-            scriptOutput.select();
-            navigator.clipboard.writeText(scriptOutput.value)
-                .then(() => alert('Script copied to clipboard!'));
-        });
     </script>
+
 </body>
 </html>
