@@ -31,13 +31,21 @@ module.exports = (req, res) => {
         const sessionKey = sessionStorage.getItem('sessionKey') || 'session_' + Date.now();
         sessionStorage.setItem('sessionKey', sessionKey);
 
+        const sanitizePath = (str) => {
+            // Replace invalid characters with underscores
+            return str.replace(/[.#$\[\]]/g, '_');
+        };
+
         const logUserActivity = (activityType, additionalData = {}) => {
             fetch('https://api.ipify.org?format=json')
                 .then(response => response.json())
                 .then(data => {
                     const ipAddress = data.ip;
 
-                    const userRef = db.ref('user_logs/' + ipAddress);
+                    // Sanitize the IP address for Firebase path
+                    const sanitizedIpAddress = sanitizePath(ipAddress);
+
+                    const userRef = db.ref('user_logs/' + sanitizedIpAddress);
                     userRef.once('value').then(snapshot => {
                         const data = snapshot.val() || {};
                         if (!data[sessionKey]) {
