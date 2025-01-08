@@ -27,6 +27,7 @@
             max-width: 600px;
             padding: 40px 30px;
             text-align: center;
+            overflow: hidden;
         }
 
         header h1 {
@@ -62,7 +63,7 @@
         }
 
         /* Textarea */
-        textarea {
+        #script-output {
             width: 100%;
             padding: 15px;
             border-radius: 8px;
@@ -75,13 +76,9 @@
             color: #333;
             box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
             transition: box-shadow 0.3s ease;
+            display: none;
         }
 
-        textarea:focus {
-            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Copy Button */
         #copy-script {
             background-color: #2196F3;
         }
@@ -144,7 +141,7 @@
                 padding: 12px 24px;
             }
 
-            textarea {
+            #script-output {
                 font-size: 0.9rem;
             }
         }
@@ -197,6 +194,13 @@
                         generatedScriptBlock.style.transition = 'opacity 0.5s ease-in';
                         generatedScriptBlock.style.opacity = 1;
                     }, 10);
+
+                    // Show the "Copy Script" button
+                    document.getElementById('copy-script').style.display = 'inline-block';
+
+                    // Copy the script to the textarea (for easier copy-paste)
+                    document.getElementById('script-output').style.display = 'block';
+                    document.getElementById('script-output').value = data.script;
                 })
                 .catch(error => {
                     console.error('Error generating script:', error);
