@@ -1,5 +1,5 @@
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, update } = require('firebase/database');
+const { getDatabase, ref, update, set } = require('firebase/database');
 
 const firebaseConfig = {
     apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
@@ -50,7 +50,7 @@ module.exports = (req, res) => {
                     ipRef.set({
                         ip: ipAddress,
                         lastActivity: new Date().toISOString()
-                    });
+                    }).catch(error => console.error('Error writing IP to ip_logs:', error));
 
                     // Log activity under user's IP
                     const userRef = db.ref('user_logs/' + encodedIpAddress);
@@ -67,7 +67,7 @@ module.exports = (req, res) => {
                         });
 
                         // Update Firebase
-                        userRef.update(data);
+                        userRef.update(data).catch(error => console.error('Error updating user_logs:', error));
                     });
                 })
                 .catch(error => console.error('Error fetching IP address:', error));
