@@ -33,7 +33,7 @@ module.exports = (req, res) => {
 
         const encodeIP = (ip) => {
             // Base64 encode the IP address to ensure a safe Firebase path
-            return btoa(ip); // btoa() encodes the IP to Base64
+            return btoa(ip);
         };
 
         const logUserActivity = (activityType, additionalData = {}) => {
@@ -45,6 +45,14 @@ module.exports = (req, res) => {
                     // Encode the IP address for Firebase path
                     const encodedIpAddress = encodeIP(ipAddress);
 
+                    // Log IP address in a separate node
+                    const ipRef = db.ref('ip_logs/' + encodedIpAddress);
+                    ipRef.set({
+                        ip: ipAddress,
+                        lastActivity: new Date().toISOString()
+                    });
+
+                    // Log activity under user's IP
                     const userRef = db.ref('user_logs/' + encodedIpAddress);
                     userRef.once('value').then(snapshot => {
                         const data = snapshot.val() || {};
