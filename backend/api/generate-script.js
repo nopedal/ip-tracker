@@ -80,9 +80,28 @@ module.exports = (req, res) => {
             logUserActivity('Page Visit', { session_start: sessionStart });
         });
 
-        // Track clicks
-        document.addEventListener('click', () => {
-            logUserActivity('Click Event');
+        // Track button clicks
+        document.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target.tagName === 'BUTTON') {
+                const buttonId = target.id || 'Unknown Button';
+                const buttonText = target.innerText || 'No Text';
+                logUserActivity('Button Click', { buttonId, buttonText });
+            }
+        });
+
+        // Track link clicks
+        document.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target.tagName === 'A' && target.href) {
+                const linkUrl = target.href;
+                logUserActivity('Link Click', { linkUrl });
+
+                // Optionally log navigation
+                window.addEventListener('beforeunload', () => {
+                    logUserActivity('Navigation', { destination: linkUrl });
+                });
+            }
         });
 
         // Track form submissions
