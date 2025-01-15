@@ -1,5 +1,5 @@
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set } = require('firebase/database');
+const { getDatabase, ref, set, update } = require('firebase/database');
 const axios = require('axios');
 
 const firebaseConfig = {
@@ -16,7 +16,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const SNITCHER_API_BASE = "https://app.snitcher.com/api/v2";
-const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7"; 
+const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7";
 
 async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
     const url = `${SNITCHER_API_BASE}${endpoint}`;
@@ -34,18 +34,25 @@ async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
     }
 }
 
-async function fetchAndStoreLeads(websiteId) {
+async function fetchAndStoreLeadsWithPages(websiteId, pages) {
     try {
         // Fetch leads from Snitcher
         const leadsData = await snitcherApiRequest(`/websites/${websiteId}`);
-        const leads = leadsData.data; // Adjust based on Snitcher response structure
+        const leads = leadsData.data.map(lead => ({
+            companyName: lead.company?.name || "Unknown",
+            companyLogo: lead.company?.logo || null,
+            companyUrl: lead.company?.url || null,
+            reference: lead.reference || null,
+            pages: pages || [],
+            websiteId: websiteId
+        }));
 
-        if (leads) {
+        if (leads.length > 0) {
             // Store leads in Firebase under the "leads" node
             const leadsRef = ref(db, `leads/${websiteId}`);
             await set(leadsRef, leads);
 
-            console.log(`Leads for website ${websiteId} have been stored in Firebase.`);
+            console.log(`Leads and page data for website ${websiteId} have been stored in Firebase.`);
         }
     } catch (error) {
         console.error('Error fetching or storing leads:', error.message);
@@ -64,59 +71,34 @@ module.exports = async (req, res) => {
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
-        
+
         const db = firebase.database();
-        const sessionKey = sessionStorage.getItem('sessionKey') || 'session_' + Date.now();
-        sessionStorage.setItem('sessionKey', sessionKey);
 
-        const encodeIP = (ip) => btoa(ip);
-
-        const logUserActivity = async (activityType, additionalData = {}) => {
+        // Function to log page visits
+        const logPageVisit = async () => {
             try {
                 const response = await fetch('https://api.ipify.org?format=json');
                 const data = await response.json();
                 const ipAddress = data.ip;
 
-                const encodedIpAddress = encodeIP(ipAddress);
-                const ipRef = db.ref('ip_logs/' + encodedIpAddress);
+                const pageUrl = window.location.href;
+                const timestamp = new Date().toISOString();
+                const encodedIp = btoa(ipAddress);
 
-                await ipRef.set({
-                    ip: ipAddress,
-                    lastActivity: new Date().toISOString()
-                });
+                const pageRef = db.ref('pages/' + encodedIp);
+                const existingPages = (await pageRef.once('value')).val() || [];
 
-                const userRef = db.ref('user_logs/' + encodedIpAddress);
-                const snapshot = await userRef.once('value');
-                const userData = snapshot.val() || {};
+                // Update Firebase with the visited page
+                existingPages.push({ pageUrl, timestamp });
+                await pageRef.set(existingPages);
 
-                if (!userData[sessionKey]) {
-                    userData[sessionKey] = { activities: [] };
-                }
-                userData[sessionKey].activities.push({
-                    type: activityType,
-                    page: window.location.href,
-                    timestamp: new Date().toISOString(),
-                    ...additionalData
-                });
-
-                await userRef.update(userData);
+                console.log('Page visit logged:', { pageUrl, timestamp });
             } catch (error) {
-                console.error('Error logging user activity:', error);
+                console.error('Error logging page visit:', error);
             }
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const sessionStart = new Date().toISOString();
-            sessionStorage.setItem('session_start', sessionStart);
-            logUserActivity('Page Visit', { session_start: sessionStart });
-        });
-
-        document.addEventListener('click', (event) => {
-            const target = event.target;
-            if (target.tagName === 'BUTTON') {
-                logUserActivity('Button Click', { buttonId: target.id, buttonText: target.innerText });
-            }
-        });
+        document.addEventListener('DOMContentLoaded', logPageVisit);
     </script>`;
 
     try {
@@ -126,13 +108,18 @@ module.exports = async (req, res) => {
 
         if (websites && websites.length > 0) {
             for (const website of websites) {
-                await fetchAndStoreLeads(website.id); // Fetch leads for each website
+                // Fetch pages for logging
+                const pagesRef = ref(db, `pages/${website.id}`);
+                const pagesSnapshot = await pagesRef.once('value');
+                const pages = pagesSnapshot.val() || [];
+
+                await fetchAndStoreLeadsWithPages(website.id, pages); // Fetch leads and attach pages data
             }
         }
 
         res.status(200).json({ script });
     } catch (error) {
         console.error('Error fetching websites or leads:', error.message);
-        res.status(500).json({ error: 'An error occurred while processing leads.' });
+        res.status(500).json({ error: 'An error occurred while processing leads and pages.' });
     }
 };
