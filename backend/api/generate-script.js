@@ -1,5 +1,5 @@
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, update, set } = require('firebase/database');
+const { getDatabase, ref, set } = require('firebase/database');
 const axios = require('axios');
 
 const firebaseConfig = {
@@ -16,7 +16,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const SNITCHER_API_BASE = "https://app.snitcher.com/api/v2";
-const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7";
+const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7"; 
 
 async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
     const url = `${SNITCHER_API_BASE}${endpoint}`;
@@ -31,6 +31,24 @@ async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
     } catch (error) {
         console.error(`Error in Snitcher API request: ${method} ${endpoint}`, error.message);
         throw error;
+    }
+}
+
+async function fetchAndStoreLeads(websiteId) {
+    try {
+        // Fetch leads from Snitcher
+        const leadsData = await snitcherApiRequest(`/websites/${websiteId}`);
+        const leads = leadsData.data; // Adjust based on Snitcher response structure
+
+        if (leads) {
+            // Store leads in Firebase under the "leads" node
+            const leadsRef = ref(db, `leads/${websiteId}`);
+            await set(leadsRef, leads);
+
+            console.log(`Leads for website ${websiteId} have been stored in Firebase.`);
+        }
+    } catch (error) {
+        console.error('Error fetching or storing leads:', error.message);
     }
 }
 
@@ -82,21 +100,8 @@ module.exports = async (req, res) => {
                 });
 
                 await userRef.update(userData);
-
-                // Fetch leads from Snitcher for enhanced tracking
-                const leadsData = await fetchSnitcherLeads();
-                console.log('Leads Data:', leadsData);
             } catch (error) {
                 console.error('Error logging user activity:', error);
-            }
-        };
-
-        const fetchSnitcherLeads = async () => {
-            try {
-                const response = await fetch('/snitcher/leads'); // Proxy endpoint
-                return await response.json();
-            } catch (error) {
-                console.error('Error fetching Snitcher leads:', error);
             }
         };
 
@@ -114,13 +119,20 @@ module.exports = async (req, res) => {
         });
     </script>`;
 
-    // Example backend usage of Snitcher API
     try {
-        const websites = await snitcherApiRequest('/websites');
-        console.log('Websites:', websites);
-    } catch (error) {
-        console.error('Error fetching websites:', error.message);
-    }
+        // Fetch websites and leads
+        const websitesData = await snitcherApiRequest('/websites');
+        const websites = websitesData.data;
 
-    res.status(200).json({ script });
+        if (websites && websites.length > 0) {
+            for (const website of websites) {
+                await fetchAndStoreLeads(website.id); // Fetch leads for each website
+            }
+        }
+
+        res.status(200).json({ script });
+    } catch (error) {
+        console.error('Error fetching websites or leads:', error.message);
+        res.status(500).json({ error: 'An error occurred while processing leads.' });
+    }
 };
