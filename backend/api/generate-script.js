@@ -1,7 +1,13 @@
+const express = require('express');
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set, get } = require('firebase/database');  // Use `get` instead of `once`
+const { getDatabase, ref, set, get } = require('firebase/database');
 const axios = require('axios');
+const cors = require('cors');  // Import the CORS package
 
+const app = express();
+const port = process.env.PORT || 5000;  // Use your preferred port
+
+// Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
     authDomain: "iptracker-d6aac.firebaseapp.com",
@@ -12,12 +18,16 @@ const firebaseConfig = {
     measurementId: "G-RZKLS087CN"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const appFirebase = initializeApp(firebaseConfig);
+const db = getDatabase(appFirebase);
+
+// Allow CORS (cross-origin resource sharing)
+app.use(cors());  // This will allow all domains, or you can specify the domains like: cors({ origin: 'https://yourfrontend.com' })
 
 const SNITCHER_API_BASE = "https://app.snitcher.com/api/v2";
 const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7";
 
+// Function to make API requests
 async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
     const url = `${SNITCHER_API_BASE}${endpoint}`;
     const headers = {
@@ -34,9 +44,9 @@ async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
     }
 }
 
+// Fetch and store leads with pages data
 async function fetchAndStoreLeadsWithPages(websiteId, pages) {
     try {
-        // Fetch leads from Snitcher
         const leadsData = await snitcherApiRequest(`/websites/${websiteId}`);
         const leads = leadsData.data.map(lead => ({
             companyName: lead.company?.name || "Unknown",
@@ -48,10 +58,8 @@ async function fetchAndStoreLeadsWithPages(websiteId, pages) {
         }));
 
         if (leads.length > 0) {
-            // Store leads in Firebase under the "leads" node
             const leadsRef = ref(db, `leads/${websiteId}`);
             await set(leadsRef, leads);
-
             console.log(`Leads and page data for website ${websiteId} have been stored in Firebase.`);
         }
     } catch (error) {
@@ -59,59 +67,53 @@ async function fetchAndStoreLeadsWithPages(websiteId, pages) {
     }
 }
 
-module.exports = async (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-    const script = `
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    
-    <script>
-        const firebaseConfig = ${JSON.stringify(firebaseConfig)};
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-
-        const db = firebase.database();
-
-        // Function to log page visits
-        const logPageVisit = async () => {
-            try {
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                const ipAddress = data.ip;
-
-                const pageUrl = window.location.href;
-                const timestamp = new Date().toISOString();
-                const encodedIp = btoa(ipAddress);
-
-                const pageRef = db.ref('pages/' + encodedIp);
-                const existingPagesSnapshot = await pageRef.get();  // Use get() instead of once()
-                const existingPages = existingPagesSnapshot.val() || [];
-
-                // Update Firebase with the visited page
-                existingPages.push({ pageUrl, timestamp });
-                await pageRef.set(existingPages);
-
-                console.log('Page visit logged:', { pageUrl, timestamp });
-            } catch (error) {
-                console.error('Error logging page visit:', error);
-            }
-        };
-
-        document.addEventListener('DOMContentLoaded', logPageVisit);
-    </script>`;
-
+// API route to generate the script
+app.get('/api/generate-script', async (req, res) => {
     try {
-        // Fetch websites and leads
+        // Fetch websites from Snitcher API
         const websitesData = await snitcherApiRequest('/websites');
         const websites = websitesData.data;
 
+        const script = `
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+        <script>
+            const firebaseConfig = ${JSON.stringify(firebaseConfig)};
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+
+            const db = firebase.database();
+
+            // Function to log page visits
+            const logPageVisit = async () => {
+                try {
+                    const response = await fetch('https://api.ipify.org?format=json');
+                    const data = await response.json();
+                    const ipAddress = data.ip;
+
+                    const pageUrl = window.location.href;
+                    const timestamp = new Date().toISOString();
+                    const encodedIp = btoa(ipAddress);
+
+                    const pageRef = db.ref('pages/' + encodedIp);
+                    const existingPagesSnapshot = await pageRef.get();  // Use get() instead of once()
+                    const existingPages = existingPagesSnapshot.val() || [];
+
+                    existingPages.push({ pageUrl, timestamp });
+                    await pageRef.set(existingPages);
+                    console.log('Page visit logged:', { pageUrl, timestamp });
+                } catch (error) {
+                    console.error('Error logging page visit:', error);
+                }
+            };
+
+            document.addEventListener('DOMContentLoaded', logPageVisit);
+        </script>`;
+
         if (websites && websites.length > 0) {
             for (const website of websites) {
-                // Fetch pages for logging
                 const pagesRef = ref(db, `pages/${website.id}`);
                 const pagesSnapshot = await get(pagesRef);  // Use get() instead of once()
                 const pages = pagesSnapshot.val() || [];
@@ -121,8 +123,14 @@ module.exports = async (req, res) => {
         }
 
         res.status(200).json({ script });
+
     } catch (error) {
         console.error('Error fetching websites or leads:', error.message);
         res.status(500).json({ error: 'An error occurred while processing leads and pages.' });
     }
-};
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+});
