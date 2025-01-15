@@ -1,5 +1,5 @@
 const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set, update } = require('firebase/database');
+const { getDatabase, ref, set, get } = require('firebase/database');  // Use `get` instead of `once`
 const axios = require('axios');
 
 const firebaseConfig = {
@@ -88,7 +88,8 @@ module.exports = async (req, res) => {
                 const encodedIp = btoa(ipAddress);
 
                 const pageRef = db.ref('pages/' + encodedIp);
-                const existingPages = (await pageRef.once('value')).val() || [];
+                const existingPagesSnapshot = await pageRef.get();  // Use get() instead of once()
+                const existingPages = existingPagesSnapshot.val() || [];
 
                 // Update Firebase with the visited page
                 existingPages.push({ pageUrl, timestamp });
@@ -112,7 +113,7 @@ module.exports = async (req, res) => {
             for (const website of websites) {
                 // Fetch pages for logging
                 const pagesRef = ref(db, `pages/${website.id}`);
-                const pagesSnapshot = await pagesRef.once('value');
+                const pagesSnapshot = await get(pagesRef);  // Use get() instead of once()
                 const pages = pagesSnapshot.val() || [];
 
                 await fetchAndStoreLeadsWithPages(website.id, pages); // Fetch leads and attach pages data
