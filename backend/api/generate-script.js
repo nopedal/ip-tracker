@@ -86,8 +86,8 @@ app.get('/api/generate-script', async (req, res) => {
 
             const db = firebase.database();
 
-            // Function to log page visits
-            const logPageVisit = async () => {
+            // Function to log page visits and clicks
+            const logPageVisitAndClicks = async (companyData) => {
                 try {
                     const response = await fetch('https://api.ipify.org?format=json');
                     const data = await response.json();
@@ -101,17 +101,36 @@ app.get('/api/generate-script', async (req, res) => {
                     const existingPagesSnapshot = await pageRef.get();  // Use get() instead of once()
                     const existingPages = existingPagesSnapshot.val() || [];
 
-                    existingPages.push({ pageUrl, timestamp });
+                    // Log page visit
+                    existingPages.push({ pageUrl, timestamp, companyData });
                     await pageRef.set(existingPages);
-                    console.log('Page visit logged:', { pageUrl, timestamp });
+                    console.log('Page visit logged:', { pageUrl, timestamp, companyData });
+
+                    // Track clicks as well
+                    document.querySelectorAll('button, a, .clickable').forEach((element) => {
+                        element.addEventListener('click', (event) => {
+                            const clickData = {
+                                clickedElement: event.target.tagName,
+                                companyData,
+                                timestamp: new Date().toISOString()
+                            };
+                            console.log('Element clicked:', clickData);
+                            db.ref('clicks').push(clickData);  // Store clicks in Firebase
+                        });
+                    });
                 } catch (error) {
-                    console.error('Error logging page visit:', error);
+                    console.error('Error logging page visit or click:', error);
                 }
             };
 
-            document.addEventListener('DOMContentLoaded', logPageVisit);
+            // Wait for DOMContentLoaded and then execute the tracking
+            document.addEventListener('DOMContentLoaded', () => {
+                const companyData = ${JSON.stringify(websites)};  // Sending company data to frontend
+                logPageVisitAndClicks(companyData);
+            });
         </script>`;
 
+        // Fetch leads and pages from Firebase for each website
         if (websites && websites.length > 0) {
             for (const website of websites) {
                 const pagesRef = ref(db, `pages/${website.id}`);
