@@ -61,6 +61,8 @@ async function fetchAndStoreLeadsWithPages(websiteId, pages) {
 
 module.exports = async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
     const script = `
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
