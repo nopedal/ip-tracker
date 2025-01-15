@@ -1,5 +1,6 @@
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, update, set } = require('firebase/database');
+const axios = require('axios');
 
 const firebaseConfig = {
     apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
@@ -14,7 +15,26 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-module.exports = (req, res) => {
+const SNITCHER_API_BASE = "https://app.snitcher.com/api/v2";
+const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7";
+
+async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
+    const url = `${SNITCHER_API_BASE}${endpoint}`;
+    const headers = {
+        'Authorization': `Bearer ${SNITCHER_API_TOKEN}`,
+        'Accept': 'application/json'
+    };
+
+    try {
+        const response = await axios({ url, method, headers, data });
+        return response.data;
+    } catch (error) {
+        console.error(`Error in Snitcher API request: ${method} ${endpoint}`, error.message);
+        throw error;
+    }
+}
+
+module.exports = async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
 
     const script = `
@@ -31,104 +51,76 @@ module.exports = (req, res) => {
         const sessionKey = sessionStorage.getItem('sessionKey') || 'session_' + Date.now();
         sessionStorage.setItem('sessionKey', sessionKey);
 
-        const encodeIP = (ip) => {
-            // Base64 encode the IP address to ensure a safe Firebase path
-            return btoa(ip);
+        const encodeIP = (ip) => btoa(ip);
+
+        const logUserActivity = async (activityType, additionalData = {}) => {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                const ipAddress = data.ip;
+
+                const encodedIpAddress = encodeIP(ipAddress);
+                const ipRef = db.ref('ip_logs/' + encodedIpAddress);
+
+                await ipRef.set({
+                    ip: ipAddress,
+                    lastActivity: new Date().toISOString()
+                });
+
+                const userRef = db.ref('user_logs/' + encodedIpAddress);
+                const snapshot = await userRef.once('value');
+                const userData = snapshot.val() || {};
+
+                if (!userData[sessionKey]) {
+                    userData[sessionKey] = { activities: [] };
+                }
+                userData[sessionKey].activities.push({
+                    type: activityType,
+                    page: window.location.href,
+                    timestamp: new Date().toISOString(),
+                    ...additionalData
+                });
+
+                await userRef.update(userData);
+
+                // Fetch leads from Snitcher for enhanced tracking
+                const leadsData = await fetchSnitcherLeads();
+                console.log('Leads Data:', leadsData);
+            } catch (error) {
+                console.error('Error logging user activity:', error);
+            }
         };
 
-        const logUserActivity = (activityType, additionalData = {}) => {
-            fetch('https://api.ipify.org?format=json')
-                .then(response => response.json())
-                .then(data => {
-                    const ipAddress = data.ip;
-
-                    // Encode the IP address for Firebase path
-                    const encodedIpAddress = encodeIP(ipAddress);
-
-                    // Log IP address in a separate node
-                    const ipRef = db.ref('ip_logs/' + encodedIpAddress);
-                    ipRef.set({
-                        ip: ipAddress,
-                        lastActivity: new Date().toISOString()
-                    }).catch(error => console.error('Error writing IP to ip_logs:', error));
-
-                    // Log activity under user's IP
-                    const userRef = db.ref('user_logs/' + encodedIpAddress);
-                    userRef.once('value').then(snapshot => {
-                        const data = snapshot.val() || {};
-                        if (!data[sessionKey]) {
-                            data[sessionKey] = { activities: [] };
-                        }
-                        data[sessionKey].activities.push({
-                            type: activityType,
-                            page: window.location.href,
-                            timestamp: new Date().toISOString(),
-                            ...additionalData
-                        });
-
-                        // Update Firebase
-                        userRef.update(data).catch(error => console.error('Error updating user_logs:', error));
-                    });
-                })
-                .catch(error => console.error('Error fetching IP address:', error));
+        const fetchSnitcherLeads = async () => {
+            try {
+                const response = await fetch('/snitcher/leads'); // Proxy endpoint
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching Snitcher leads:', error);
+            }
         };
 
-        // Track page visits
         document.addEventListener('DOMContentLoaded', () => {
             const sessionStart = new Date().toISOString();
             sessionStorage.setItem('session_start', sessionStart);
             logUserActivity('Page Visit', { session_start: sessionStart });
         });
 
-        // Track button clicks
         document.addEventListener('click', (event) => {
             const target = event.target;
             if (target.tagName === 'BUTTON') {
-                const buttonId = target.id || 'Unknown Button';
-                const buttonText = target.innerText || 'No Text';
-                logUserActivity('Button Click', { buttonId, buttonText });
-            }
-        });
-
-        // Track link clicks
-        document.addEventListener('click', (event) => {
-            const target = event.target;
-            if (target.tagName === 'A' && target.href) {
-                const linkUrl = target.href;
-                logUserActivity('Link Click', { linkUrl });
-
-                // Optionally log navigation
-                window.addEventListener('beforeunload', () => {
-                    logUserActivity('Navigation', { destination: linkUrl });
-                });
-            }
-        });
-
-        // Track form submissions
-        document.addEventListener('submit', (event) => {
-            const form = event.target;
-            const formId = form.id || 'Unknown Form';
-            logUserActivity('Form Submission', { formId });
-        });
-
-        // Track "Thank You" page visit
-        if (window.location.href.includes('thank-you')) {
-            logUserActivity('Thank You Page');
-        }
-
-        // Track session duration and bounce
-        window.addEventListener('beforeunload', () => {
-            const sessionStart = sessionStorage.getItem('session_start');
-            const sessionEnd = new Date().toISOString();
-            const sessionDuration = sessionStart ? (new Date(sessionEnd) - new Date(sessionStart)) / 1000 : null;
-
-            if (sessionDuration && sessionDuration < 10) {
-                logUserActivity('Bounce', { sessionDuration });
-            } else {
-                logUserActivity('Session End', { session_end: sessionEnd, sessionDuration });
+                logUserActivity('Button Click', { buttonId: target.id, buttonText: target.innerText });
             }
         });
     </script>`;
-    
+
+    // Example backend usage of Snitcher API
+    try {
+        const websites = await snitcherApiRequest('/websites');
+        console.log('Websites:', websites);
+    } catch (error) {
+        console.error('Error fetching websites:', error.message);
+    }
+
     res.status(200).json({ script });
 };
