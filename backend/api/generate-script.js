@@ -9,7 +9,7 @@ const port = process.env.PORT || 5000;
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
+    apiKey: "AIzaSyDkPQPzhbCtPxR9Dh5p76hE-b3sr0jA",
     authDomain: "iptracker-d6aac.firebaseapp.com",
     projectId: "iptracker-d6aac",
     storageBucket: "iptracker-d6aac.firebasestorage.app",
@@ -27,27 +27,6 @@ app.use(cors());
 const SNITCHER_API_BASE = "https://app.snitcher.com/api/v2";
 const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7";
 
-// Function to fetch company data from Snitcher
-async function fetchCompanyData(ipAddress) {
-    try {
-        const response = await axios.get(`${SNITCHER_API_BASE}/ip/${ipAddress}`, {
-            headers: {
-                'Authorization': `Bearer ${SNITCHER_API_TOKEN}`,
-                'Accept': 'application/json',
-            },
-        });
-        const data = response.data;
-        return {
-            companyName: data.company?.name || 'Unknown',
-            companyLogo: data.company?.logo || null,
-            companyUrl: data.company?.url || null,
-        };
-    } catch (error) {
-        console.error('Error fetching company data from Snitcher:', error.message);
-        return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
-    }
-}
-
 // API route to generate the script
 app.get('/api/generate-script', async (req, res) => {
     try {
@@ -63,14 +42,36 @@ app.get('/api/generate-script', async (req, res) => {
 
             const db = firebase.database();
 
+            // Define fetchCompanyData on the client
+            const fetchCompanyData = async (ipAddress) => {
+                try {
+                    const response = await fetch(\`${SNITCHER_API_BASE}/ip/\${ipAddress}\`, {
+                        headers: {
+                            'Authorization': 'Bearer ${SNITCHER_API_TOKEN}',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        return {
+                            companyName: data.company?.name || 'Unknown',
+                            companyLogo: data.company?.logo || null,
+                            companyUrl: data.company?.url || null,
+                        };
+                    }
+                    return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
+                } catch (error) {
+                    console.error('Error fetching company data:', error);
+                    return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
+                }
+            };
+
             const logPageVisit = async (ipAddress, pageUrl) => {
                 const timestamp = new Date().toISOString();
                 const encodedIp = btoa(ipAddress);
 
-                // Fetch company data
                 const companyData = await fetchCompanyData(ipAddress);
 
-                // Track page visits
                 const pageRef = db.ref('pages/' + encodedIp);
                 const existingPagesSnapshot = await pageRef.get();
                 const existingPages = existingPagesSnapshot.val() || [];
