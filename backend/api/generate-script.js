@@ -14,7 +14,7 @@ const firebaseConfig = {
     projectId: "iptracker-d6aac",
     storageBucket: "iptracker-d6aac.firebasestorage.app",
     messagingSenderId: "352009531638",
-    appId: "1:352009f74631115cddfcd7",
+    appId: "1:352009531638:web:50ef03f74631115cddfcd7",
     measurementId: "G-RZKLS087CN",
 };
 
@@ -24,119 +24,167 @@ const db = getDatabase(appFirebase);
 // Allow CORS
 app.use(cors());
 
-// Function to fetch company data from Snitcher
-const fetchCompanyData = async (ipAddress) => {
+// Snitcher API configuration
+const SNITCHER_API_BASE = "https://app.snitcher.com/api/v2";
+const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7";
+
+// Function to make API requests
+async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
+    const url = `${SNITCHER_API_BASE}${endpoint}`;
+    const headers = {
+        'Authorization': `Bearer ${SNITCHER_API_TOKEN}`,
+        'Accept': 'application/json',
+    };
+
     try {
-        const response = await axios.get(`https://api.apify.org/v2/ip/${ipAddress}?fields=company`, {
-            headers: {
-                'Authorization': 'Bearer YOUR_SNITCHER_API_TOKEN',
-            },
+        const response = await axios({ url, method, headers, data });
+        return response.data;
+    } catch (error) {
+        console.error(`Error in Snitcher API request: ${method} ${endpoint}`, error.message);
+        throw error;
+    }
+}
+
+// API route to fetch company data (proxy)
+app.get('/api/company-data', async (req, res) => {
+    const ipAddress = req.query.ip;
+    try {
+        const companyData = await snitcherApiRequest(`/ip/${ipAddress}`);
+        res.json({
+            companyName: companyData.company?.name || 'Unknown',
+            companyLogo: companyData.company?.logo || null,
+            companyUrl: companyData.company?.url || null,
         });
-        const data = response.data;
-        return {
-            companyName: data.company?.name || 'Unknown',
-            companyLogo: data.company?.logo || null,
-            companyUrl: data.company?.url || null,
-        };
     } catch (error) {
         console.error('Error fetching company data:', error.message);
-        return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
+        res.status(500).json({ error: 'Failed to fetch company data' });
     }
-};
+});
 
-// API route to generate the script
-app.get('/api/generate-script', (req, res) => {
-    const script = `
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+// API route to generate the tracking script
+app.get('/api/generate-script', async (req, res) => {
+    try {
+        const script = `
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    <script>
-        const firebaseConfig = ${JSON.stringify(firebaseConfig)};
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-
-        const db = firebase.database();
-
-        const fetchCompanyData = async (ipAddress) => {
-            try {
-                const response = await fetch('https://api.apify.org/v2/ip/' + ipAddress + '?fields=company');
-                if (response.ok) {
-                    const data = await response.json();
-                    return {
-                        companyName: data.company?.name || 'Unknown',
-                        companyLogo: data.company?.logo || null,
-                        companyUrl: data.company?.url || null,
-                    };
-                }
-                return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
-            } catch (error) {
-                console.error('Error fetching company data:', error);
-                return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
+        <script>
+            const firebaseConfig = ${JSON.stringify(firebaseConfig)};
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
             }
-        };
 
-        const logPageVisit = async (ipAddress, pageUrl) => {
-            const timestamp = new Date().toISOString();
-            const encodedIp = btoa(ipAddress);
+            const db = firebase.database();
 
-            // Fetch company data
-            const companyData = await fetchCompanyData(ipAddress);
-
-            // Track page visits
-            const pageRef = db.ref('pages/' + encodedIp);
-            const existingPagesSnapshot = await pageRef.get();
-            const existingPages = existingPagesSnapshot.val() || [];
-
-            existingPages.push({ pageUrl, timestamp, companyData });
-            await pageRef.set(existingPages);
-
-            console.log('Page visit logged:', { pageUrl, timestamp, companyData });
-        };
-
-        const logClickEvent = async (ipAddress, clickedElement, pageUrl) => {
-            const timestamp = new Date().toISOString();
-            const encodedIp = btoa(ipAddress);
-
-            // Fetch company data
-            const companyData = await fetchCompanyData(ipAddress);
-
-            const clickData = {
-                clickedElement,
-                pageUrl,
-                companyName: companyData.companyName || 'Unknown',
-                timestamp,
+            const fetchCompanyData = async (ipAddress) => {
+                try {
+                    const response = await fetch('/api/company-data?ip=' + encodeURIComponent(ipAddress));
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                    return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
+                } catch (error) {
+                    console.error('Error fetching company data:', error);
+                    return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
+                }
             };
 
-            // Log click event
-            await db.ref('clicks/' + encodedIp).push(clickData);
-            console.log('Click event logged:', clickData);
-        };
+            const logPageVisit = async (ipAddress, pageUrl) => {
+                const timestamp = new Date().toISOString();
+                const encodedIp = btoa(ipAddress);
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // Get user's IP address
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                const ipAddress = data.ip;
+                // Fetch company data
+                const companyData = await fetchCompanyData(ipAddress);
 
-                // Log page visit
-                const pageUrl = window.location.href;
-                await logPageVisit(ipAddress, pageUrl);
+                // Track page visits
+                const pageRef = db.ref('pages/' + encodedIp);
+                const existingPagesSnapshot = await pageRef.get();
+                const existingPages = existingPagesSnapshot.val() || [];
 
-                // Track clicks on buttons, links, and clickable elements
-                document.querySelectorAll('button, a, .clickable').forEach((element) => {
-                    element.addEventListener('click', (event) => {
-                        const clickedElement = event.target.tagName;
-                        logClickEvent(ipAddress, clickedElement, pageUrl);
+                existingPages.push({ pageUrl, timestamp, companyData });
+                await pageRef.set(existingPages);
+
+                console.log('Page visit logged:', { pageUrl, timestamp, companyData });
+            };
+
+            const logClickEvent = async (ipAddress, clickedElement, pageUrl) => {
+                const timestamp = new Date().toISOString();
+                const encodedIp = btoa(ipAddress);
+
+                const clickData = {
+                    clickedElement,
+                    pageUrl,
+                    timestamp,
+                };
+
+                // Log click event
+                db.ref('clicks/' + encodedIp).push(clickData);
+                console.log('Click event logged:', clickData);
+            };
+
+            const logConversion = async (ipAddress, conversionType, pageUrl) => {
+                const timestamp = new Date().toISOString();
+                const encodedIp = btoa(ipAddress);
+
+                const conversionData = {
+                    conversionType,
+                    pageUrl,
+                    timestamp,
+                };
+
+                // Log conversion event
+                await db.ref('conversions/' + encodedIp).push(conversionData);
+                console.log('Conversion logged:', conversionData);
+            };
+
+            document.addEventListener('DOMContentLoaded', async () => {
+                try {
+                    // Get user's IP address
+                    const response = await fetch('https://api.ipify.org?format=json');
+                    const data = await response.json();
+                    const ipAddress = data.ip;
+
+                    // Log page visit
+                    const pageUrl = window.location.href;
+                    await logPageVisit(ipAddress, pageUrl);
+
+                    // Track clicks on buttons, links, and clickable elements
+                    document.querySelectorAll('button, a, .clickable').forEach((element) => {
+                        element.addEventListener('click', (event) => {
+                            const clickedElement = event.target.tagName;
+                            logClickEvent(ipAddress, clickedElement, pageUrl);
+                        });
                     });
-                });
-            } catch (error) {
-                console.error('Error initializing tracking:', error);
-            }
-        });
-    </script>`;
-    res.status(200).json({ script });
+
+                    // Track form submissions
+                    document.querySelectorAll('form').forEach((form) => {
+                        form.addEventListener('submit', () => {
+                            logConversion(ipAddress, 'Form Submission', pageUrl);
+                        });
+                    });
+
+                    // Track phone/email clicks
+                    document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"]').forEach((link) => {
+                        link.addEventListener('click', () => {
+                            logConversion(ipAddress, 'Phone/Email Click', pageUrl);
+                        });
+                    });
+
+                    // Track "Thank You" page visit
+                    if (pageUrl.includes('thank-you')) {
+                        await logConversion(ipAddress, 'Thank You Page', pageUrl);
+                    }
+                } catch (error) {
+                    console.error('Error initializing tracking:', error);
+                }
+            });
+        </script>`;
+
+        res.status(200).json({ script });
+    } catch (error) {
+        console.error('Error generating script:', error.message);
+        res.status(500).json({ error: 'Failed to generate the script.' });
+    }
 });
 
 // Start the server
