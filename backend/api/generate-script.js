@@ -111,8 +111,14 @@ app.get('/api/generate-script', async (req, res) => {
                 const timestamp = new Date().toISOString();
                 const encodedIp = btoa(ipAddress);
 
+                // Extract meaningful details from the clicked element
+                const elementDetails = clickedElement.textContent?.trim() ||
+                                       clickedElement.getAttribute('aria-label') ||
+                                       clickedElement.getAttribute('alt') ||
+                                       clickedElement.tagName;
+
                 const clickData = {
-                    clickedElement,
+                    clickedElement: elementDetails,
                     pageUrl,
                     timestamp,
                 };
@@ -120,21 +126,6 @@ app.get('/api/generate-script', async (req, res) => {
                 // Log click event
                 db.ref('clicks/' + encodedIp).push(clickData);
                 console.log('Click event logged:', clickData);
-            };
-
-            const logConversion = async (ipAddress, conversionType, pageUrl) => {
-                const timestamp = new Date().toISOString();
-                const encodedIp = btoa(ipAddress);
-
-                const conversionData = {
-                    conversionType,
-                    pageUrl,
-                    timestamp,
-                };
-
-                // Log conversion event
-                await db.ref('conversions/' + encodedIp).push(conversionData);
-                console.log('Conversion logged:', conversionData);
             };
 
             document.addEventListener('DOMContentLoaded', async () => {
@@ -151,29 +142,10 @@ app.get('/api/generate-script', async (req, res) => {
                     // Track clicks on buttons, links, and clickable elements
                     document.querySelectorAll('button, a, .clickable').forEach((element) => {
                         element.addEventListener('click', (event) => {
-                            const clickedElement = event.target.tagName;
+                            const clickedElement = event.target;
                             logClickEvent(ipAddress, clickedElement, pageUrl);
                         });
                     });
-
-                    // Track form submissions
-                    document.querySelectorAll('form').forEach((form) => {
-                        form.addEventListener('submit', () => {
-                            logConversion(ipAddress, 'Form Submission', pageUrl);
-                        });
-                    });
-
-                    // Track phone/email clicks
-                    document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"]').forEach((link) => {
-                        link.addEventListener('click', () => {
-                            logConversion(ipAddress, 'Phone/Email Click', pageUrl);
-                        });
-                    });
-
-                    // Track "Thank You" page visit
-                    if (pageUrl.includes('thank-you')) {
-                        await logConversion(ipAddress, 'Thank You Page', pageUrl);
-                    }
                 } catch (error) {
                     console.error('Error initializing tracking:', error);
                 }
