@@ -27,30 +27,30 @@ app.use(cors());
 const SNITCHER_API_BASE = "https://app.snitcher.com/api/v2";
 const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7";
 
-// Function to make API requests
-async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
-    const url = `${SNITCHER_API_BASE}${endpoint}`;
-    const headers = {
-        'Authorization': `Bearer ${SNITCHER_API_TOKEN}`,
-        'Accept': 'application/json',
-    };
-
+// Function to fetch company data from Snitcher
+async function fetchCompanyData(ipAddress) {
     try {
-        const response = await axios({ url, method, headers, data });
-        return response.data;
+        const response = await axios.get(`${SNITCHER_API_BASE}/ip/${ipAddress}`, {
+            headers: {
+                'Authorization': `Bearer ${SNITCHER_API_TOKEN}`,
+                'Accept': 'application/json',
+            },
+        });
+        const data = response.data;
+        return {
+            companyName: data.company?.name || 'Unknown',
+            companyLogo: data.company?.logo || null,
+            companyUrl: data.company?.url || null,
+        };
     } catch (error) {
-        console.error(`Error in Snitcher API request: ${method} ${endpoint}`, error.message);
-        throw error;
+        console.error('Error fetching company data from Snitcher:', error.message);
+        return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
     }
 }
 
 // API route to generate the script
 app.get('/api/generate-script', async (req, res) => {
     try {
-        // Fetch websites from Snitcher API
-        const websitesData = await snitcherApiRequest('/websites');
-        const websites = websitesData.data;
-
         const script = `
         <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -62,29 +62,6 @@ app.get('/api/generate-script', async (req, res) => {
             }
 
             const db = firebase.database();
-
-            const fetchCompanyData = async (ipAddress) => {
-                try {
-                    const response = await fetch('https://app.snitcher.com/api/v2/ip/${ipAddress}', {
-                        headers: {
-                            'Authorization': 'Bearer ${SNITCHER_API_TOKEN}',
-                            'Accept': 'application/json'
-                        }
-                    });
-                    if (response.ok) {
-                        const data = await response.json();
-                        return {
-                            companyName: data.company?.name || 'Unknown',
-                            companyLogo: data.company?.logo || null,
-                            companyUrl: data.company?.url || null,
-                        };
-                    }
-                    return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
-                } catch (error) {
-                    console.error('Error fetching company data:', error);
-                    return { companyName: 'Unknown', companyLogo: null, companyUrl: null };
-                }
-            };
 
             const logPageVisit = async (ipAddress, pageUrl) => {
                 const timestamp = new Date().toISOString();
@@ -113,7 +90,6 @@ app.get('/api/generate-script', async (req, res) => {
                     timestamp,
                 };
 
-                // Log click event
                 db.ref('clicks/' + encodedIp).push(clickData);
                 console.log('Click event logged:', clickData);
             };
@@ -127,23 +103,19 @@ app.get('/api/generate-script', async (req, res) => {
                     timestamp,
                 };
 
-                // Log conversion event
                 await db.ref('conversions/' + encodedIp).push(conversionData);
                 console.log('Conversion logged:', conversionData);
             };
 
             document.addEventListener('DOMContentLoaded', async () => {
                 try {
-                    // Get user's IP address
                     const response = await fetch('https://api.ipify.org?format=json');
                     const data = await response.json();
                     const ipAddress = data.ip;
 
-                    // Log page visit
                     const pageUrl = window.location.href;
                     await logPageVisit(ipAddress, pageUrl);
 
-                    // Track clicks on buttons, links, and clickable elements
                     document.querySelectorAll('button, a, .clickable').forEach((element) => {
                         element.addEventListener('click', (event) => {
                             const clickedElement = event.target.tagName;
@@ -151,21 +123,18 @@ app.get('/api/generate-script', async (req, res) => {
                         });
                     });
 
-                    // Track form submissions
                     document.querySelectorAll('form').forEach((form) => {
                         form.addEventListener('submit', () => {
                             logConversion(ipAddress, 'Form Submission');
                         });
                     });
 
-                    // Track phone/email clicks
                     document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"]').forEach((link) => {
                         link.addEventListener('click', () => {
                             logConversion(ipAddress, 'Phone/Email Click');
                         });
                     });
 
-                    // Track "Thank You" page visit
                     if (pageUrl.includes('thank-you')) {
                         await logConversion(ipAddress, 'Thank You Page');
                     }
@@ -177,8 +146,8 @@ app.get('/api/generate-script', async (req, res) => {
 
         res.status(200).json({ script });
     } catch (error) {
-        console.error('Error fetching websites or generating script:', error.message);
-        res.status(500).json({ error: 'An error occurred while generating the script.' });
+        console.error('Error generating script:', error.message);
+        res.status(500).json({ error: 'Failed to generate script.' });
     }
 });
 
