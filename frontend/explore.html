@@ -31,6 +31,17 @@
             <p style="margin-top: 16px;">Don't have an account? <a href="#" id="sign-up-link">Sign Up</a></p>
         </div>
 
+        <!-- Sign Up Form (hidden by default) -->
+        <div class="sign-up" style="display: none;">
+            <h2>Create an Account</h2>
+            <form id="sign-up-form">
+                <input type="email" id="sign-up-email" placeholder="Email" required style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="password" id="sign-up-password" placeholder="Password" required style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <button type="submit">Sign Up</button>
+            </form>
+            <p style="margin-top: 16px;">Already have an account? <a href="#" id="sign-in-link">Sign In</a></p>
+        </div>
+
         <!-- Dashboard -->
         <div class="dashboard">
             <div class="dashboard-header">
@@ -91,7 +102,9 @@
 
         // DOM Elements
         const loginForm = document.getElementById('login-form');
+        const signUpForm = document.getElementById('sign-up-form');
         const signUpLink = document.getElementById('sign-up-link');
+        const signInLink = document.getElementById('sign-in-link');
         const connectGoogleBtn = document.getElementById('connect-google-btn');
 
         // Show Loading
@@ -131,10 +144,10 @@
         });
 
         // Sign Up
-        signUpLink.addEventListener('click', (e) => {
+        signUpForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const email = document.getElementById('sign-up-email').value;
+            const password = document.getElementById('sign-up-password').value;
 
             showLoading();
             auth.createUserWithEmailAndPassword(email, password)
@@ -194,6 +207,7 @@
         // Update UI
         function updateUI(user) {
             document.querySelector('.login').style.display = 'none';
+            document.querySelector('.sign-up').style.display = 'none';
             document.querySelector('.dashboard').style.display = 'block';
             document.getElementById('user-name').innerText = user.displayName || user.email;
             document.getElementById('user-avatar').innerText = getInitials(user.displayName || user.email);
@@ -221,8 +235,20 @@
                 updateUI(user);
             } else {
                 document.querySelector('.login').style.display = 'block';
+                document.querySelector('.sign-up').style.display = 'none';
                 document.querySelector('.dashboard').style.display = 'none';
             }
+        });
+
+        // Switch between Sign Up and Sign In
+        signUpLink.addEventListener('click', () => {
+            document.querySelector('.login').style.display = 'none';
+            document.querySelector('.sign-up').style.display = 'block';
+        });
+
+        signInLink.addEventListener('click', () => {
+            document.querySelector('.login').style.display = 'block';
+            document.querySelector('.sign-up').style.display = 'none';
         });
     </script>
 </body>
