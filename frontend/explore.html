@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <style>
+        /* Your styling here */
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
@@ -83,11 +84,7 @@
             text-decoration: underline;
         }
 
-        /* Dashboard Styles */
-        .dashboard {
-            display: none;
-        }
-
+        /* Loading Spinner */
         .loading {
             display: none;
         }
@@ -126,7 +123,7 @@
             <p class="link">Don't have an account? <a href="#" id="sign-up-link">Sign Up</a></p>
         </div>
 
-        <!-- Sign Up Form (hidden by default) -->
+        <!-- Sign Up Form -->
         <div class="sign-up" style="display: none;">
             <h2>Create an Account</h2>
             <form id="sign-up-form">
@@ -141,7 +138,7 @@
             <p class="link">Already have an account? <a href="#" id="sign-in-link">Sign In</a></p>
         </div>
 
-        <!-- Loading Animation -->
+        <!-- Loading Spinner -->
         <div class="loading">
             <div class="loading-spinner"></div>
         </div>
@@ -165,12 +162,10 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // DOM Elements
         const loginForm = document.getElementById('login-form');
         const signUpForm = document.getElementById('sign-up-form');
         const signUpLink = document.getElementById('sign-up-link');
         const signInLink = document.getElementById('sign-in-link');
-        const connectGoogleBtn = document.getElementById('connect-google-btn');
 
         // Show Loading
         function showLoading() {
@@ -189,17 +184,16 @@
             const password = document.getElementById('password').value;
 
             showLoading();
+
             auth.signInWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
                     updateUI(user);
                 })
                 .catch((error) => {
-                    console.error("Login Error:", error.message);
-                    alert("Login failed. Please check your email and password.");
-                })
-                .finally(() => {
                     hideLoading();
+                    console.error("Login Error:", error.message);
+                    alert(`Login failed: ${error.message}`);
                 });
         });
 
@@ -209,41 +203,42 @@
             const email = document.getElementById('sign-up-email').value;
             const password = document.getElementById('sign-up-password').value;
 
+            // Password validation
             if (password.length < 6) {
                 alert("Password must be at least 6 characters long.");
                 return;
             }
 
             showLoading();
+
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
+
+                    // Store Access Token in Firestore
+                    storeAccessToken(user);
                     updateUI(user);
                 })
                 .catch((error) => {
-                    console.error("Sign Up Error:", error.message);
-                    alert("Sign up failed. Please check your email and password.");
-                })
-                .finally(() => {
                     hideLoading();
+                    console.error("Sign Up Error:", error.message);
+                    alert(`Sign up failed: ${error.message}`);
                 });
         });
 
-        // Sign Out
-        function signOut() {
-            showLoading();
-            auth.signOut()
-                .then(() => {
-                    document.querySelector('.login').style.display = 'block';
-                    document.querySelector('.dashboard').style.display = 'none';
-                })
-                .catch((error) => {
-                    console.error("Sign-Out Error:", error);
-                    alert("Sign out failed. Please try again.");
-                })
-                .finally(() => {
-                    hideLoading();
-                });
+        // Store User's Access Token in Firestore
+        function storeAccessToken(user) {
+            const accessToken = user.za; // Firebase access token
+            db.collection("users").doc(user.uid).set({
+                email: user.email,
+                accessToken: accessToken
+            })
+            .then(() => {
+                console.log("Access Token stored in Firestore");
+            })
+            .catch((error) => {
+                console.error("Error storing access token:", error.message);
+            });
         }
 
         // Update UI after login/signup
@@ -252,7 +247,7 @@
             document.querySelector('.sign-up').style.display = 'none';
             document.querySelector('.dashboard').style.display = 'block';
             document.getElementById('user-name').innerText = user.displayName || user.email;
-            // Handle Dashboard data...
+            // Dashboard Data...
         }
 
         // Switch between Sign Up and Sign In
@@ -264,6 +259,16 @@
         signInLink.addEventListener('click', () => {
             document.querySelector('.login').style.display = 'block';
             document.querySelector('.sign-up').style.display = 'none';
+        });
+
+        // Auth State Listener
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                updateUI(user);
+            } else {
+                document.querySelector('.login').style.display = 'block';
+                document.querySelector('.dashboard').style.display = 'none';
+            }
         });
     </script>
 </body>
