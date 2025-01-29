@@ -68,10 +68,10 @@
             authDomain: "iptracker-d6aac.firebaseapp.com",
             databaseURL: "https://iptracker-d6aac-default-rtdb.firebaseio.com",
             projectId: "iptracker-d6aac",
-            storageBucket: "iptracker-d6aac.firebasestorage.app",
+            storageBucket: "iptracker-d6aac.appspot.com",
             messagingSenderId: "352009531638",
             appId: "1:352009531638:web:50ef03f74631115cddfcd7",
-            measurementId: "RZKLS087CN"
+            measurementId: "G-RZKLS087CN"
         };
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
@@ -81,40 +81,42 @@
         function onSignIn(googleUser) {
             var profile = googleUser.getBasicProfile();
             var id_token = googleUser.getAuthResponse().id_token;
-            var access_token = googleUser.getAuthResponse().access_token;
 
             document.querySelector('.login').style.display = 'none';
             document.querySelector('.dashboard').style.display = 'block';
             document.getElementById('user-info').innerText = 'Signed in as: ' + profile.getName();
 
             console.log("User Info:", profile);
-            console.log("Access Token:", access_token);
+            
+            // Sign into Firebase Auth with Google Token
+            const credential = firebase.auth.GoogleAuthProvider.credential(id_token);
+            auth.signInWithCredential(credential)
+                .then(userCredential => {
+                    var user = userCredential.user;
+                    console.log("Firebase User:", user);
 
-            // Send access token to Firebase Firestore
-            db.collection("users").doc(profile.getId()).set({
-                name: profile.getName(),
-                email: profile.getEmail(),
-                accessToken: access_token
-            }).then(() => {
-                console.log("Access Token stored in Firestore");
-            }).catch(error => {
-                console.error("Error storing token:", error);
-            });
+                    // Store user info in Firestore
+                    db.collection("users").doc(user.uid).set({
+                        name: user.displayName,
+                        email: user.email,
+                        uid: user.uid
+                    })
+                    .then(() => console.log("User data stored in Firestore"))
+                    .catch(error => console.error("Error storing user data:", error));
+                })
+                .catch(error => console.error("Firebase Auth Error:", error));
 
             // Google Analytics Tracking
-            gtag('event', 'login', {
-                'method': 'Google'
-            });
+            gtag('event', 'login', { 'method': 'Google' });
         }
 
         // Handle Sign Out
         function signOut() {
-            var auth2 = gapi.auth2.getAuthInstance();
-            auth2.signOut().then(function () {
+            auth.signOut().then(() => {
                 document.querySelector('.login').style.display = 'block';
                 document.querySelector('.dashboard').style.display = 'none';
                 console.log("User signed out.");
-            });
+            }).catch(error => console.error("Sign-Out Error:", error));
         }
     </script>
 
