@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics Dashboard</title>
     
-    <!-- Google Sign-In -->
-    <script src="https://apis.google.com/js/platform.js" async defer></script>
-    <meta name="google-signin-client_id" content="52189727404-uheajopbr9ij6jqi470c1hgsv3spja1f.apps.googleusercontent.com">
-    
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js" defer></script>
+
+    <!-- Google Identity Services (New API) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_TRACKING_ID"></script>
@@ -52,7 +51,12 @@
 
     <div class="login">
         <h2>Login to Dashboard</h2>
-        <div class="g-signin2" data-onsuccess="onSignIn"></div>
+        <div id="g_id_onload"
+             data-client_id="52189727404-uheajopbr9ij6jqi470c1hgsv3spja1f.apps.googleusercontent.com"
+             data-callback="onSignIn"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin" data-type="standard"></div>
     </div>
 
     <div class="dashboard">
@@ -63,39 +67,34 @@
 
     <script>
         // Initialize Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
-            authDomain: "iptracker-d6aac.firebaseapp.com",
-            databaseURL: "https://iptracker-d6aac-default-rtdb.firebaseio.com",
-            projectId: "iptracker-d6aac",
-            storageBucket: "iptracker-d6aac.appspot.com",
-            messagingSenderId: "352009531638",
-            appId: "1:352009531638:web:50ef03f74631115cddfcd7",
-            measurementId: "G-RZKLS087CN"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        document.addEventListener("DOMContentLoaded", function () {
+            const firebaseConfig = {
+                apiKey: "AIzaSyDkPQPzhbCtPxR9Dh8Wv5p76hE-b3sr0jA",
+                authDomain: "iptracker-d6aac.firebaseapp.com",
+                databaseURL: "https://iptracker-d6aac-default-rtdb.firebaseio.com",
+                projectId: "iptracker-d6aac",
+                storageBucket: "iptracker-d6aac.appspot.com",
+                messagingSenderId: "352009531638",
+                appId: "1:352009531638:web:50ef03f74631115cddfcd7",
+                measurementId: "G-RZKLS087CN"
+            };
+            firebase.initializeApp(firebaseConfig);
+        });
 
         // Handle Google Sign-In
-        function onSignIn(googleUser) {
-            var profile = googleUser.getBasicProfile();
-            var id_token = googleUser.getAuthResponse().id_token;
-
-            document.querySelector('.login').style.display = 'none';
-            document.querySelector('.dashboard').style.display = 'block';
-            document.getElementById('user-info').innerText = 'Signed in as: ' + profile.getName();
-
-            console.log("User Info:", profile);
-            
-            // Sign into Firebase Auth with Google Token
-            const credential = firebase.auth.GoogleAuthProvider.credential(id_token);
-            auth.signInWithCredential(credential)
+        function onSignIn(response) {
+            const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
+            firebase.auth().signInWithCredential(credential)
                 .then(userCredential => {
-                    var user = userCredential.user;
+                    const user = userCredential.user;
+                    document.querySelector('.login').style.display = 'none';
+                    document.querySelector('.dashboard').style.display = 'block';
+                    document.getElementById('user-info').innerText = 'Signed in as: ' + user.displayName;
+
                     console.log("Firebase User:", user);
 
-                    // Store user info in Firestore
+                    // Store user data in Firestore
+                    const db = firebase.firestore();
                     db.collection("users").doc(user.uid).set({
                         name: user.displayName,
                         email: user.email,
@@ -103,20 +102,22 @@
                     })
                     .then(() => console.log("User data stored in Firestore"))
                     .catch(error => console.error("Error storing user data:", error));
+
+                    // Google Analytics Tracking
+                    gtag('event', 'login', { 'method': 'Google' });
                 })
                 .catch(error => console.error("Firebase Auth Error:", error));
-
-            // Google Analytics Tracking
-            gtag('event', 'login', { 'method': 'Google' });
         }
 
-        // Handle Sign Out
+        // Handle Sign-Out
         function signOut() {
-            auth.signOut().then(() => {
-                document.querySelector('.login').style.display = 'block';
-                document.querySelector('.dashboard').style.display = 'none';
-                console.log("User signed out.");
-            }).catch(error => console.error("Sign-Out Error:", error));
+            firebase.auth().signOut()
+                .then(() => {
+                    document.querySelector('.login').style.display = 'block';
+                    document.querySelector('.dashboard').style.display = 'none';
+                    console.log("User signed out.");
+                })
+                .catch(error => console.error("Sign-Out Error:", error));
         }
     </script>
 
