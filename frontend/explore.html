@@ -10,185 +10,28 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <!-- Google Identity -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            color: #2d3748;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .login {
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 400px;
-            margin: 0 auto;
-            transition: all 0.3s ease;
-        }
-
-        .login h2 {
-            margin-bottom: 24px;
-            color: #1a202c;
-            font-weight: 600;
-        }
-
-        .dashboard {
-            display: none;
-            width: 100%;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .dashboard-header {
-            background: #2c5282;
-            color: white;
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .dashboard-header h2 {
-            font-weight: 500;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #4299e1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 500;
-        }
-
-        .dashboard-content {
-            padding: 40px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 24px;
-            margin-bottom: 40px;
-        }
-
-        .stat-card {
-            background: #f7fafc;
-            padding: 24px;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .stat-card h3 {
-            color: #4a5568;
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-
-        .stat-value {
-            font-size: 1.875rem;
-            font-weight: 600;
-            color: #2d3748;
-        }
-
-        button {
-            background: #4299e1;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background: #3182ce;
-        }
-
-        .sign-out-btn {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-        }
-
-        .sign-out-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Loading animation */
-        .loading {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3182ce;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        /* Your existing CSS styles */
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Login Form -->
         <div class="login">
             <h2>Welcome Back</h2>
             <p style="margin-bottom: 24px; color: #4a5568;">Sign in to access your dashboard</p>
-            <div id="g_id_onload"
-                 data-client_id="52189727404-uheajopbr9ij6jqi470c1hgsv3spja1f.apps.googleusercontent.com"
-                 data-callback="onSignIn"
-                 data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin" data-type="standard"></div>
+            <form id="login-form">
+                <input type="email" id="email" placeholder="Email" required style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <input type="password" id="password" placeholder="Password" required style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <button type="submit">Sign In</button>
+            </form>
+            <p style="margin-top: 16px;">Don't have an account? <a href="#" id="sign-up-link">Sign Up</a></p>
         </div>
 
+        <!-- Dashboard -->
         <div class="dashboard">
             <div class="dashboard-header">
                 <h2>Analytics Dashboard</h2>
@@ -203,24 +46,26 @@
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h3>Total Views</h3>
-                        <div class="stat-value">24.5K</div>
+                        <div class="stat-value" id="total-views">0</div>
                     </div>
                     <div class="stat-card">
                         <h3>Unique Visitors</h3>
-                        <div class="stat-value">12.8K</div>
+                        <div class="stat-value" id="unique-visitors">0</div>
                     </div>
                     <div class="stat-card">
                         <h3>Bounce Rate</h3>
-                        <div class="stat-value">33.2%</div>
+                        <div class="stat-value" id="bounce-rate">0%</div>
                     </div>
                     <div class="stat-card">
                         <h3>Avg. Session</h3>
-                        <div class="stat-value">4m 12s</div>
+                        <div class="stat-value" id="avg-session">0m 0s</div>
                     </div>
                 </div>
+                <button onclick="connectGoogleAccount()" id="connect-google-btn">Connect Google Account</button>
             </div>
         </div>
 
+        <!-- Loading Animation -->
         <div class="loading">
             <div class="loading-spinner"></div>
         </div>
@@ -241,58 +86,80 @@
 
         firebase.initializeApp(firebaseConfig);
 
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // DOM Elements
+        const loginForm = document.getElementById('login-form');
+        const signUpLink = document.getElementById('sign-up-link');
+        const connectGoogleBtn = document.getElementById('connect-google-btn');
+
+        // Show Loading
         function showLoading() {
             document.querySelector('.loading').style.display = 'block';
         }
 
+        // Hide Loading
         function hideLoading() {
             document.querySelector('.loading').style.display = 'none';
         }
 
+        // Get Initials
         function getInitials(name) {
             return name.split(' ').map(n => n[0]).join('').toUpperCase();
         }
 
-        function onSignIn(response) {
-            showLoading();
-            const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
-            
-            firebase.auth().signInWithCredential(credential)
-                .then(userCredential => {
-                    const user = userCredential.user;
-                    document.querySelector('.login').style.display = 'none';
-                    document.querySelector('.dashboard').style.display = 'block';
-                    document.getElementById('user-name').innerText = user.displayName;
-                    document.getElementById('user-avatar').innerText = getInitials(user.displayName);
+        // Sign In with Email/Password
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
 
-                    return firebase.firestore().collection("users").doc(user.uid).set({
-                        name: user.displayName,
-                        email: user.email,
-                        uid: user.uid,
-                        lastLogin: new Date()
-                    });
+            showLoading();
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    updateUI(user);
                 })
-                .then(() => {
-                    console.log("User data stored in Firestore");
-                })
-                .catch(error => {
-                    console.error("Authentication Error:", error);
-                    alert("Authentication failed. Please try again.");
+                .catch((error) => {
+                    console.error("Login Error:", error);
+                    alert("Login failed. Please check your email and password.");
                 })
                 .finally(() => {
                     hideLoading();
                 });
-        }
+        });
 
+        // Sign Up
+        signUpLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            showLoading();
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    updateUI(user);
+                })
+                .catch((error) => {
+                    console.error("Sign Up Error:", error);
+                    alert("Sign up failed. Please try again.");
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        });
+
+        // Sign Out
         function signOut() {
             showLoading();
-            firebase.auth().signOut()
+            auth.signOut()
                 .then(() => {
                     document.querySelector('.login').style.display = 'block';
                     document.querySelector('.dashboard').style.display = 'none';
-                    console.log("User signed out successfully");
                 })
-                .catch(error => {
+                .catch((error) => {
                     console.error("Sign-Out Error:", error);
                     alert("Sign out failed. Please try again.");
                 })
@@ -301,12 +168,57 @@
                 });
         }
 
-        firebase.auth().onAuthStateChanged((user) => {
+        // Connect Google Account
+        function connectGoogleAccount() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.currentUser.linkWithPopup(provider)
+                .then((result) => {
+                    const credential = result.credential;
+                    const accessToken = credential.accessToken;
+                    const user = result.user;
+
+                    // Store Google Access Token in Firestore
+                    db.collection("users").doc(user.uid).update({
+                        googleAccessToken: accessToken
+                    }).then(() => {
+                        console.log("Google access token stored in Firestore");
+                        alert("Google account connected successfully!");
+                    });
+                })
+                .catch((error) => {
+                    console.error("Google Connection Error:", error);
+                    alert("Failed to connect Google account. Please try again.");
+                });
+        }
+
+        // Update UI
+        function updateUI(user) {
+            document.querySelector('.login').style.display = 'none';
+            document.querySelector('.dashboard').style.display = 'block';
+            document.getElementById('user-name').innerText = user.displayName || user.email;
+            document.getElementById('user-avatar').innerText = getInitials(user.displayName || user.email);
+
+            // Load Real-Time Data
+            loadRealTimeData(user.uid);
+        }
+
+        // Load Real-Time Data from Firestore
+        function loadRealTimeData(uid) {
+            db.collection("users").doc(uid).onSnapshot((doc) => {
+                const data = doc.data();
+                if (data) {
+                    document.getElementById('total-views').innerText = data.totalViews || 0;
+                    document.getElementById('unique-visitors').innerText = data.uniqueVisitors || 0;
+                    document.getElementById('bounce-rate').innerText = data.bounceRate ? `${data.bounceRate}%` : "0%";
+                    document.getElementById('avg-session').innerText = data.avgSession || "0m 0s";
+                }
+            });
+        }
+
+        // Auth State Listener
+        auth.onAuthStateChanged((user) => {
             if (user) {
-                document.querySelector('.login').style.display = 'none';
-                document.querySelector('.dashboard').style.display = 'block';
-                document.getElementById('user-name').innerText = user.displayName;
-                document.getElementById('user-avatar').innerText = getInitials(user.displayName);
+                updateUI(user);
             } else {
                 document.querySelector('.login').style.display = 'block';
                 document.querySelector('.dashboard').style.display = 'none';
