@@ -138,6 +138,12 @@
             <p class="link">Already have an account? <a href="#" id="sign-in-link">Sign In</a></p>
         </div>
 
+        <!-- Dashboard -->
+        <div class="dashboard" style="display: none;">
+            <h2>Welcome to the Analytics Dashboard</h2>
+            <button onclick="signOut()">Sign Out</button>
+        </div>
+
         <!-- Loading Spinner -->
         <div class="loading">
             <div class="loading-spinner"></div>
@@ -166,6 +172,9 @@
         const signUpForm = document.getElementById('sign-up-form');
         const signUpLink = document.getElementById('sign-up-link');
         const signInLink = document.getElementById('sign-in-link');
+        const dashboard = document.querySelector('.dashboard');
+        const login = document.querySelector('.login');
+        const signUp = document.querySelector('.sign-up');
 
         // Show Loading
         function showLoading() {
@@ -243,22 +252,20 @@
 
         // Update UI after login/signup
         function updateUI(user) {
-            document.querySelector('.login').style.display = 'none';
-            document.querySelector('.sign-up').style.display = 'none';
-            document.querySelector('.dashboard').style.display = 'block';
-            document.getElementById('user-name').innerText = user.displayName || user.email;
-            // Dashboard Data...
+            login.style.display = 'none';
+            signUp.style.display = 'none';
+            dashboard.style.display = 'block';
         }
 
         // Switch between Sign Up and Sign In
         signUpLink.addEventListener('click', () => {
-            document.querySelector('.login').style.display = 'none';
-            document.querySelector('.sign-up').style.display = 'block';
+            login.style.display = 'none';
+            signUp.style.display = 'block';
         });
 
         signInLink.addEventListener('click', () => {
-            document.querySelector('.login').style.display = 'block';
-            document.querySelector('.sign-up').style.display = 'none';
+            login.style.display = 'block';
+            signUp.style.display = 'none';
         });
 
         // Auth State Listener
@@ -266,10 +273,17 @@
             if (user) {
                 updateUI(user);
             } else {
-                document.querySelector('.login').style.display = 'block';
-                document.querySelector('.dashboard').style.display = 'none';
+                login.style.display = 'block';
+                dashboard.style.display = 'none';
             }
         });
+
+        function signOut() {
+            auth.signOut().then(() => {
+                login.style.display = 'block';
+                dashboard.style.display = 'none';
+            });
+        }
     </script>
 </body>
 </html>
