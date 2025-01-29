@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics Dashboard</title>
-    
+
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -12,9 +12,100 @@
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    
+
     <style>
-        /* Your existing CSS styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #4a5568;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .link {
+            text-align: center;
+            display: block;
+            margin-top: 10px;
+        }
+
+        .link a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        .link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Dashboard Styles */
+        .dashboard {
+            display: none;
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -24,56 +115,30 @@
             <h2>Welcome Back</h2>
             <p style="margin-bottom: 24px; color: #4a5568;">Sign in to access your dashboard</p>
             <form id="login-form">
-                <input type="email" id="email" placeholder="Email" required style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <input type="password" id="password" placeholder="Password" required style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <div class="form-group">
+                    <input type="email" id="email" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" placeholder="Password" required>
+                </div>
                 <button type="submit">Sign In</button>
             </form>
-            <p style="margin-top: 16px;">Don't have an account? <a href="#" id="sign-up-link">Sign Up</a></p>
+            <p class="link">Don't have an account? <a href="#" id="sign-up-link">Sign Up</a></p>
         </div>
 
         <!-- Sign Up Form (hidden by default) -->
         <div class="sign-up" style="display: none;">
             <h2>Create an Account</h2>
             <form id="sign-up-form">
-                <input type="email" id="sign-up-email" placeholder="Email" required style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <input type="password" id="sign-up-password" placeholder="Password" required style="width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <div class="form-group">
+                    <input type="email" id="sign-up-email" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="sign-up-password" placeholder="Password" required>
+                </div>
                 <button type="submit">Sign Up</button>
             </form>
-            <p style="margin-top: 16px;">Already have an account? <a href="#" id="sign-in-link">Sign In</a></p>
-        </div>
-
-        <!-- Dashboard -->
-        <div class="dashboard">
-            <div class="dashboard-header">
-                <h2>Analytics Dashboard</h2>
-                <div class="user-info">
-                    <div class="user-avatar" id="user-avatar"></div>
-                    <span id="user-name"></span>
-                    <button onclick="signOut()" class="sign-out-btn">Sign Out</button>
-                </div>
-            </div>
-            
-            <div class="dashboard-content">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Total Views</h3>
-                        <div class="stat-value" id="total-views">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Unique Visitors</h3>
-                        <div class="stat-value" id="unique-visitors">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Bounce Rate</h3>
-                        <div class="stat-value" id="bounce-rate">0%</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Avg. Session</h3>
-                        <div class="stat-value" id="avg-session">0m 0s</div>
-                    </div>
-                </div>
-                <button onclick="connectGoogleAccount()" id="connect-google-btn">Connect Google Account</button>
-            </div>
+            <p class="link">Already have an account? <a href="#" id="sign-in-link">Sign In</a></p>
         </div>
 
         <!-- Loading Animation -->
@@ -117,11 +182,6 @@
             document.querySelector('.loading').style.display = 'none';
         }
 
-        // Get Initials
-        function getInitials(name) {
-            return name.split(' ').map(n => n[0]).join('').toUpperCase();
-        }
-
         // Sign In with Email/Password
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -135,7 +195,7 @@
                     updateUI(user);
                 })
                 .catch((error) => {
-                    console.error("Login Error:", error);
+                    console.error("Login Error:", error.message);
                     alert("Login failed. Please check your email and password.");
                 })
                 .finally(() => {
@@ -149,6 +209,11 @@
             const email = document.getElementById('sign-up-email').value;
             const password = document.getElementById('sign-up-password').value;
 
+            if (password.length < 6) {
+                alert("Password must be at least 6 characters long.");
+                return;
+            }
+
             showLoading();
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
@@ -156,8 +221,8 @@
                     updateUI(user);
                 })
                 .catch((error) => {
-                    console.error("Sign Up Error:", error);
-                    alert("Sign up failed. Please try again.");
+                    console.error("Sign Up Error:", error.message);
+                    alert("Sign up failed. Please check your email and password.");
                 })
                 .finally(() => {
                     hideLoading();
@@ -181,64 +246,14 @@
                 });
         }
 
-        // Connect Google Account
-        function connectGoogleAccount() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.currentUser.linkWithPopup(provider)
-                .then((result) => {
-                    const credential = result.credential;
-                    const accessToken = credential.accessToken;
-                    const user = result.user;
-
-                    // Store Google Access Token in Firestore
-                    db.collection("users").doc(user.uid).update({
-                        googleAccessToken: accessToken
-                    }).then(() => {
-                        console.log("Google access token stored in Firestore");
-                        alert("Google account connected successfully!");
-                    });
-                })
-                .catch((error) => {
-                    console.error("Google Connection Error:", error);
-                    alert("Failed to connect Google account. Please try again.");
-                });
-        }
-
-        // Update UI
+        // Update UI after login/signup
         function updateUI(user) {
             document.querySelector('.login').style.display = 'none';
             document.querySelector('.sign-up').style.display = 'none';
             document.querySelector('.dashboard').style.display = 'block';
             document.getElementById('user-name').innerText = user.displayName || user.email;
-            document.getElementById('user-avatar').innerText = getInitials(user.displayName || user.email);
-
-            // Load Real-Time Data
-            loadRealTimeData(user.uid);
+            // Handle Dashboard data...
         }
-
-        // Load Real-Time Data from Firestore
-        function loadRealTimeData(uid) {
-            db.collection("users").doc(uid).onSnapshot((doc) => {
-                const data = doc.data();
-                if (data) {
-                    document.getElementById('total-views').innerText = data.totalViews || 0;
-                    document.getElementById('unique-visitors').innerText = data.uniqueVisitors || 0;
-                    document.getElementById('bounce-rate').innerText = data.bounceRate ? `${data.bounceRate}%` : "0%";
-                    document.getElementById('avg-session').innerText = data.avgSession || "0m 0s";
-                }
-            });
-        }
-
-        // Auth State Listener
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                updateUI(user);
-            } else {
-                document.querySelector('.login').style.display = 'block';
-                document.querySelector('.sign-up').style.display = 'none';
-                document.querySelector('.dashboard').style.display = 'none';
-            }
-        });
 
         // Switch between Sign Up and Sign In
         signUpLink.addEventListener('click', () => {
