@@ -28,7 +28,6 @@ app.use(cors());
 const SNITCHER_API_BASE = "https://app.snitcher.com/api/v2";
 const SNITCHER_API_TOKEN = "35|q6azGtUq0zJOSeIrVltnADeZAVtO62gRAT5B0UR7";
 
-// Function to make API requests
 async function snitcherApiRequest(endpoint, method = 'GET', data = null) {
     const url = `${SNITCHER_API_BASE}${endpoint}`;
     const headers = {
